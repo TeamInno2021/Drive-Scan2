@@ -3,7 +3,7 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 
 module.exports = {
     mode: process.env.NODE_ENV || "development",
-    entry: "./src/app/renderer.tsx",
+    entry: "./src/renderer.tsx",
     target: "electron-renderer",
     devtool: "source-map",
     devServer: {
@@ -12,7 +12,7 @@ module.exports = {
         port: 9000,
     },
     resolve: {
-        extensions: [".tsx", ".ts", ".js"],
+        extensions: [".tsx", ".ts", ".jsx", ".js"],
     },
     module: {
         rules: [

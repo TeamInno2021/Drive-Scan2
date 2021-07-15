@@ -5,7 +5,7 @@ module.exports = {
     entry: "./src/main.ts",
     target: "electron-main",
     resolve: {
-        extensions: [".tsx", ".ts", ".js"],
+        extensions: [".ts", ".js"],
     },
     module: {
         rules: [
