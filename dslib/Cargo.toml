@@ -9,16 +9,11 @@ crate-type = ["cdylib"]
 
 [dependencies]
 napi-derive = "1.1.0"
-napi = { version = "1.7.5", features = ["serde-json"] }
 serde = { version = "1.0", features = ["derive"] }
+napi = { version = "1.7.5", features = ["serde-json"] }
 
 [build-dependencies]
 napi-build = "1.1.0"
-
-# libc = "0.2"
-# nodejs-sys = "0.13.0"
-
-# serde_json = "1.0.64"
 
 [target.'cfg(windows)'.build-dependencies]
 # windows dependencies
