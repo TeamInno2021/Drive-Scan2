@@ -8,6 +8,7 @@
         "start:nobuild": "electron dist/main.js"
     },
     "dependencies": {
+        "@saleae/ffi": "^3.0.2",
         "dslib": "file:./dslib/pkg"
     },
     "devDependencies": {
