@@ -1,0 +1,12 @@
+{
+    "package": "dslib",
+    "scripts": {
+        "test:pkg": "npm run build && ts-node pkg/test.ts",
+        "build": "napi build --release && node move.js"
+    },
+    "devDependencies": {
+        "@napi-rs/cli": "^1.1.0",
+        "ts-node": "^10.1.0",
+        "typescript": "^4.3.5"
+    }
+}

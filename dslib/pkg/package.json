@@ -1,0 +1,6 @@
+{
+    "name": "dslib",
+    "dependencies": {
+        "@saleae/ffi": "^3.0.2"
+    }
+}
