@@ -1,12 +1,14 @@
 #[cfg(windows)]
 mod windows;
 #[cfg(windows)]
-use windows::scan as _scan;
+use windows as interface;
 
 #[cfg(unix)]
 mod unix;
 #[cfg(unix)]
-use unix::scan as _scan;
+use unix as interface;
+
+mod fallback;
 
 #[macro_use]
 extern crate napi_derive;
@@ -31,7 +33,12 @@ pub struct ScanResult {
 #[js_function(1)]
 fn scan(ctx: CallContext) -> Result<JsUnknown> {
     let dir: PathBuf = ctx.get::<JsString>(0)?.into_utf8()?.as_str()?.into();
-    let res = _scan(dir.clone());
+
+    let res = if interface::verify(&dir) {
+        interface::scan(dir.clone())
+    } else {
+        fallback::scan(dir.clone())
+    };
 
     match res {
         Ok(f) => ctx.env.to_js_value(&ScanResult {
