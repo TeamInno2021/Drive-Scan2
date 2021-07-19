@@ -43,6 +43,7 @@ dependencies = [
  "serde",
  "tracing",
  "tracing-subscriber",
+ "winapi",
 ]
 
 [[package]]

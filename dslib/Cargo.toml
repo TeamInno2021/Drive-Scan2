@@ -18,8 +18,9 @@ tracing-subscriber = "0.2.19"
 [build-dependencies]
 napi-build = "1.1.0"
 
-[target.'cfg(windows)'.build-dependencies]
+[target.'cfg(windows)'.dependencies]
 # windows dependencies
+winapi = { version = "0.3.9", features = ["fileapi"] }
 
-[target.'cfg(unix)'.build-dependencies]
+[target.'cfg(unix)'.dependencies]
 # unix dependencies
