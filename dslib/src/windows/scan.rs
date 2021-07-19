@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-pub fn scan(dir: PathBuf) {
+pub fn scan(dir: PathBuf) -> Result<(), String> {
     // Extract the drive letter of the target device
     let drive = dir
         .components()
@@ -13,4 +13,6 @@ pub fn scan(dir: PathBuf) {
         .unwrap();
 
     println!("{:#?}", drive);
+
+    Ok(())
 }
