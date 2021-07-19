@@ -12,6 +12,8 @@ mod fallback;
 
 #[macro_use]
 extern crate napi_derive;
+#[macro_use]
+extern crate tracing;
 
 use napi::{CallContext, JsObject, JsString, JsUnknown, Result};
 use serde::{Deserialize, Serialize};
@@ -34,10 +36,23 @@ pub struct ScanResult {
 fn scan(ctx: CallContext) -> Result<JsUnknown> {
     let dir: PathBuf = ctx.get::<JsString>(0)?.into_utf8()?.as_str()?.into();
 
-    let res = if interface::verify(&dir) {
-        interface::scan(dir.clone())
-    } else {
-        fallback::scan(dir.clone())
+    let res = match interface::verify(&dir) {
+        Ok(v) => {
+            if v {
+                interface::scan(dir.clone())
+            } else {
+                info!("unable to verify scan directory, using fallback");
+                fallback::scan(dir.clone())
+            }
+        }
+        Err(e) => {
+            error!(
+                "unexpected error while attempting to validate scan directory ({}): {}",
+                std::env::consts::OS,
+                e
+            );
+            fallback::scan(dir.clone())
+        }
     };
 
     match res {
@@ -51,6 +66,7 @@ fn scan(ctx: CallContext) -> Result<JsUnknown> {
 
 #[module_exports]
 fn init(mut exports: JsObject) -> Result<()> {
+    tracing_subscriber::fmt::init();
     exports.create_named_method("scan", scan)?;
     Ok(())
 }
