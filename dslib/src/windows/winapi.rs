@@ -10,8 +10,10 @@ use winapi::um::winbase::{
     FormatMessageW, FORMAT_MESSAGE_FROM_SYSTEM, FORMAT_MESSAGE_IGNORE_INSERTS,
 };
 
-/// Convert an error code into an error message using the `FormatMessage` method
-fn extract_error(code: u32) -> Option<OsString> {
+/// Get the error message of the last winapi error using `GetLastError` and `FormatMessage`
+pub fn get_last_error() -> OsString {
+    let code = unsafe { GetLastError() };
+
     const BUFFER_SIZE: u32 = 16384; // 16kb
     let mut buffer: Vec<u16> = Vec::with_capacity(BUFFER_SIZE as usize);
 
@@ -27,12 +29,13 @@ fn extract_error(code: u32) -> Option<OsString> {
         )
     };
 
+    unsafe { buffer.set_len(size as usize) }
+
+    // If FormatMessage failed then inject our own error message
     if size == 0 {
-        // If zero bytes were stored then the function failed
-        None
+        OsString::from("`FormatMessage` unexpectedly failed to fetch error status, this is likely a bug or a problem with your system")
     } else {
-        unsafe { buffer.set_len(size as usize) }
-        Some(OsString::from_wide(&buffer))
+        OsString::from_wide(&buffer)
     }
 }
 
@@ -56,11 +59,7 @@ where
     let code = func(buffer.as_mut_ptr(), size);
 
     if !success(code) {
-        // Extract the actual error code as a concrete type
-        let code = unsafe { GetLastError() };
-
-        Err(extract_error(code)
-            .unwrap_or_else(|| format!("unable to locate error message for code: {}", code).into()))
+        Err(get_last_error())
     } else {
         unsafe { buffer.set_len(size.into()) }
 

@@ -1,4 +1,4 @@
-use std::ffi::OsString;
+use super::OsError;
 use std::path::Path;
 use std::ptr;
 
@@ -7,7 +7,7 @@ use winapi::shared::minwindef::MAX_PATH;
 use winapi::um::fileapi::GetVolumeInformationW;
 
 /// Ensure we are on an NTFS drive
-pub fn verify(dir: &Path) -> Result<bool, OsString> {
+pub fn verify(dir: &Path) -> Result<bool, OsError> {
     let root = dir.ancestors().last().unwrap(); // this unwrap is safe as .ancestors() always returns at least one value
 
     // Get the name of the partition system of the target device
