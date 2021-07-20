@@ -60,18 +60,18 @@ pub fn to_wstring(val: &str) -> Vec<u16> {
 ///
 /// # Arguments
 /// - *size* - The buffer size, this is often passed directly to the function as well
-/// - *f* - The closure which contains the function being called, this is passed a pointer to an lpstr to use as an output buffer
+/// - *f* - The closure which contains the function being called, this is passed a pointer to an lpstr to use as an output buffer. It is also passed the value passed to the `size` argument of this function.
 /// - *sucess* - A closure which identifies the returned status code and checks whether the function succeeded, if it did not then `GetLastError` will be called and result in an error.
 ///              Note that for closures which do not return a status code, the `success` method will be ignored.
 // todo make function return `Result<OsString, Error>` and handle the lookup with `FormatMessage`
-pub fn winapi_call<R, F, Fs>(size: usize, f: F, success: Fs) -> Option<OsString>
+pub fn winapi_call<R, F, Fs>(size: u32, f: F, success: Fs) -> Option<OsString>
 where
     R: WinapiReturn,
-    F: FnOnce(*mut u16) -> R,
+    F: FnOnce(*mut u16, u32) -> R,
     Fs: FnOnce(i32) -> bool,
 {
-    let mut str: Vec<u16> = Vec::with_capacity(size);
-    let res = f(str.as_mut_ptr());
+    let mut str: Vec<u16> = Vec::with_capacity(size as usize);
+    let res = f(str.as_mut_ptr(), size);
 
     match R::IDENT {
         WinapiReturnType::unit => (),
@@ -108,7 +108,7 @@ where
         }
     };
 
-    unsafe { str.set_len(size) };
+    unsafe { str.set_len(size as usize) };
 
     // remove any characters after the first null byte
     str.truncate(str.iter().position(|c| *c == 0).unwrap_or(str.len()));

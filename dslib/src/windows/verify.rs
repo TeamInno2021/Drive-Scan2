@@ -2,7 +2,6 @@ use std::path::Path;
 use std::ptr;
 
 use super::winapi::{winapi_call, winapi_str};
-use super::Error;
 use winapi::shared::minwindef::MAX_PATH;
 use winapi::um::fileapi::GetVolumeInformationW;
 
@@ -12,8 +11,8 @@ pub fn verify(dir: &Path) -> Result<bool, Box<dyn ::std::error::Error>> {
 
     // Get the name of the partition system of the target device
     let system = winapi_call(
-        MAX_PATH + 1,
-        |system| unsafe {
+        (MAX_PATH + 1) as u32,
+        |system, size| unsafe {
             GetVolumeInformationW(
                 winapi_str(root.to_str().unwrap()),
                 ptr::null_mut(),
@@ -22,7 +21,7 @@ pub fn verify(dir: &Path) -> Result<bool, Box<dyn ::std::error::Error>> {
                 ptr::null_mut(),
                 ptr::null_mut(),
                 system,
-                (MAX_PATH + 1) as u32,
+                size,
             )
         },
         |code| code != 0,
