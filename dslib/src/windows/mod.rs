@@ -1,5 +1,6 @@
 mod drive;
 mod error;
+mod raw;
 mod verify;
 mod winapi;
 

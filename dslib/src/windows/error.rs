@@ -6,6 +6,18 @@ pub struct OsError(pub OsString);
 
 impl ::std::error::Error for OsError {}
 
+impl From<&'static str> for OsError {
+    fn from(s: &'static str) -> Self {
+        s.to_string().into()
+    }
+}
+
+impl From<String> for OsError {
+    fn from(s: String) -> Self {
+        OsError(s.into())
+    }
+}
+
 impl From<OsString> for OsError {
     fn from(s: OsString) -> Self {
         OsError(s)
