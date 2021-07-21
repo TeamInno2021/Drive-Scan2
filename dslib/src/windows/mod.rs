@@ -1,8 +1,8 @@
+mod boot;
 mod drive;
 mod error;
 mod filesystem;
 mod mft;
-mod raw;
 mod winapi;
 
 use super::File;
@@ -18,8 +18,10 @@ pub fn scan(dir: PathBuf) -> Result<File, Box<dyn ::std::error::Error>> {
     let drive = DriveInfo::parse(dir.clone())?;
     info!("Fetched metadata for {:#?}", drive);
 
+    let _nodes = mft::process(drive)?;
+
     // Time to read the actual MFT,
-    // here we go - ***REMOVED***
+    // here we go
 
     // use ::std::ffi::c_void;
     // use ::std::ptr;

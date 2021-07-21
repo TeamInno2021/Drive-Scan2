@@ -1,4 +1,4 @@
-use super::raw::BootSector;
+use super::boot::BootSector;
 use super::OsError;
 
 use std::ffi::c_void;

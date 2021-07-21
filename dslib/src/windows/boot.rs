@@ -1,7 +1,8 @@
-use super::winapi::get_last_error;
 use super::OsError;
 use std::ffi::c_void;
 use std::{fmt, ptr};
+
+use super::winapi::get_last_error;
 use winapi::um::fileapi::ReadFile;
 
 /// NTFS boot sector information
