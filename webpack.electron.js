@@ -14,6 +14,10 @@ module.exports = {
                 include: /src/,
                 use: [{ loader: "ts-loader" }],
             },
+            {
+                test: /\.node$/,
+                loader: "node-loader",
+            },
         ],
     },
     output: {
