@@ -3,8 +3,9 @@ import * as Utility from "./utility";
 
 export class App extends Component {      
     render(): JSX.Element {
-        console.log("Test");
-        Utility.myFunction();
-        return <h1>Hello, World!</h1>;
+        return <h3>
+            Select
+            <input id="button" type="button" value="Directory" onClick={Utility.getDirectory}/>
+            </h3>;
     }
 }

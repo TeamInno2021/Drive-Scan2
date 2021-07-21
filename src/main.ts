@@ -9,7 +9,7 @@ app.whenReady().then(() => {
     const win = new BrowserWindow({
         width: 1920,
         height: 1080,
-        webPreferences: {
+        webPreferences: {enableRemoteModule: true,
             nodeIntegration: true,
             contextIsolation: false,
         },
