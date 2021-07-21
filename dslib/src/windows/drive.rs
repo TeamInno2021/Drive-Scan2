@@ -19,7 +19,7 @@ pub struct DriveInfo {
     /// The name of the drive volume
     pub volume: String,
     /// A handle to the target volume
-    pub volume_handle: *mut c_void,
+    pub handle: *mut c_void,
     /// Low level bootsector information
     pub boot: BootSector,
     // Extra cluster information for parsing mft records
@@ -57,7 +57,7 @@ impl DriveInfo {
         .trim_end_matches('\\') // remove trailing backslashes
         .to_string();
 
-        let volume_handle = unsafe {
+        let handle = unsafe {
             CreateFileW(
                 winapi_str(&volume),
                 GENERIC_READ,
@@ -69,12 +69,12 @@ impl DriveInfo {
             )
         };
 
-        if volume_handle == INVALID_HANDLE_VALUE {
+        if handle == INVALID_HANDLE_VALUE {
             return Err(get_last_error().into());
         }
 
         // Read NTFS-specific metadata off the disk
-        let boot = BootSector::read_from(volume_handle)?;
+        let boot = BootSector::read_from(handle)?;
 
         // Once-off math to help offset calculations later
         let bytes_per_mft_record: u64 = if boot.clusters_per_mft_record >= 128 {
@@ -89,7 +89,7 @@ impl DriveInfo {
             root,
             letter,
             volume,
-            volume_handle,
+            handle,
             boot,
             bytes_per_mft_record,
         })
@@ -98,6 +98,6 @@ impl DriveInfo {
 
 impl Drop for DriveInfo {
     fn drop(&mut self) {
-        unsafe { CloseHandle(self.volume_handle) };
+        unsafe { CloseHandle(self.handle) };
     }
 }
