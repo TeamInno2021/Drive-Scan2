@@ -5,6 +5,6 @@ app.whenReady().then(() => {
         width: 1920,
         height: 1080,
     });
-
+    win.webContents.openDevTools();
     win.loadFile("index.html");
 });

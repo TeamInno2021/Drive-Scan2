@@ -1,7 +1,10 @@
 import React, { Component } from "react";
+import * as Utility from "./utility";
 
 export class App extends Component {      
     render(): JSX.Element {
-        return <h1>Hello, World</h1>;
+        console.log("Test");
+        Utility.myFunction();
+        return <h1>Hello, World!</h1>;
     }
 }
