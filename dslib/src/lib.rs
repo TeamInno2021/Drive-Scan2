@@ -22,8 +22,15 @@ use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum File {
-    File { path: PathBuf, size: usize },
-    Directory(HashMap<String, File>),
+    File {
+        path: PathBuf,
+        size: usize,
+    },
+    Directory {
+        files: HashMap<String, File>,
+        path: PathBuf,
+        size: usize,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]
