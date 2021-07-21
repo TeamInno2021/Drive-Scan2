@@ -1,3 +1,3 @@
 import { scan } from "dslib";
 
-console.log(scan("C:\\demo\\test.fs"));
+console.log(scan("C:\\"));
