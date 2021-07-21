@@ -113,35 +113,3 @@ pub fn scan(dir: PathBuf) -> Result<File, Box<dyn ::std::error::Error>> {
 
     Ok(File::File { path: dir, size: 0 })
 }
-
-/*
-private unsafe void FixupRawMftdata(byte* buffer, UInt64 len)
-{
-    FileRecordHeader* ntfsFileRecordHeader = (FileRecordHeader*)buffer;
-
-    if (ntfsFileRecordHeader->RecordHeader.Type != RecordType.File)
-        return;
-
-    UInt16* wordBuffer = (UInt16*)buffer;
-
-    UInt16* UpdateSequenceArray = (UInt16*)(buffer + ntfsFileRecordHeader->RecordHeader.UsaOffset);
-    UInt32 increment = (UInt32)_diskInfo.BytesPerSector / sizeof(UInt16);
-
-    UInt32 Index = increment - 1;
-
-    for (int i = 1; i < ntfsFileRecordHeader->RecordHeader.UsaCount; i++)
-    {
-        /* Check if we are inside the buffer. */
-        if (Index * sizeof(UInt16) >= len)
-            throw new Exception("USA data indicates that data is missing, the MFT may be corrupt.");
-
-        // Check if the last 2 bytes of the sector contain the Update Sequence Number.
-        if (wordBuffer[Index] != UpdateSequenceArray[0])
-            throw new Exception("USA fixup word is not equal to the Update Sequence Number, the MFT may be corrupt.");
-
-        /* Replace the last 2 bytes in the sector with the value from the Usa array. */
-        wordBuffer[Index] = UpdateSequenceArray[i];
-        Index = Index + increment;
-    }
-}
- */
