@@ -1,3 +1,3 @@
-import { scan } from "dslib";
+import { _scan } from "dslib";
 
-console.log(scan("C:\\"));
+console.log(_scan("C:\\"));
