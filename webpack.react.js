@@ -16,19 +16,19 @@ module.exports = {
     },
     module: {
         rules: [
-        {
-            test: /\.ts(x?)$/,
-            include: /src/,
-            use: [{ loader: "ts-loader" }],
-        },
-        {
-            test: /\.s[ac]ss$/i,
-            use: ["style-loader", "css-loader", "sass-loader"],
-        },
-        {
-            test: /\.svg$/,
-            use: ['@svgr/webpack'],
-        },
+            {
+                test: /\.ts(x?)$/,
+                include: /src/,
+                use: [{ loader: "ts-loader" }],
+            },
+            {
+                test: /\.s[ac]ss$/i,
+                use: ["style-loader", "css-loader", "sass-loader"],
+            },
+            {
+                test: /\.svg$/,
+                use: ["@svgr/webpack"],
+            },
         ],
     },
     output: {
