@@ -2,6 +2,7 @@
 
 use super::{winapi, OsError};
 
-mod boot;
+pub mod boot;
+pub mod mft;
 
 pub use boot::BootSector;

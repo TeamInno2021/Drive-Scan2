@@ -38,30 +38,26 @@ impl fmt::Debug for BootSector {
 }
 
 impl BootSector {
-    pub fn read_from(volume_handle: *mut c_void) -> Result<Self, OsError> {
+    pub unsafe fn read_from(volume_handle: *mut c_void) -> Result<Self, OsError> {
         let mut volume_data: Vec<u8> = Vec::with_capacity(512);
         let mut size = 0;
 
-        unsafe {
-            if ReadFile(
-                volume_handle,
-                volume_data.as_mut_ptr() as *mut c_void,
-                512,
-                &mut size,
-                ptr::null_mut(),
-            ) == 0
-            {
-                return Err(get_last_error().into());
-            }
-        };
+        if ReadFile(
+            volume_handle,
+            volume_data.as_mut_ptr() as *mut c_void,
+            512,
+            &mut size,
+            ptr::null_mut(),
+        ) == 0
+        {
+            return Err(get_last_error().into());
+        }
 
-        unsafe { volume_data.set_len(size as usize) };
+        volume_data.set_len(size as usize);
 
-        let volume_data: &mut BootSector = unsafe {
-            (volume_data.as_mut_ptr() as *mut BootSector)
-                .as_mut()
-                .unwrap()
-        };
+        let volume_data: &mut BootSector = (volume_data.as_mut_ptr() as *mut BootSector)
+            .as_mut()
+            .unwrap();
 
         // Ensure this is actually an NTFS drive by comparing the metadata to the expected signature
         // NTFS OEM ID taken from https://opensource.apple.com/source/ntfs/ntfs-94/newfs/layout.h.auto.html

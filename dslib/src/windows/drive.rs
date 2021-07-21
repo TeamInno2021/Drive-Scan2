@@ -74,7 +74,7 @@ impl DriveInfo {
         }
 
         // Read NTFS-specific metadata off the disk
-        let boot = BootSector::read_from(handle)?;
+        let boot = unsafe { BootSector::read_from(handle)? };
 
         // Once-off math to help offset calculations later
         let bytes_per_mft_record: u64 = if boot.clusters_per_mft_record >= 128 {
