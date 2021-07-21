@@ -1,3 +1,4 @@
-import { scan } from "dslib";
+import { scan } from "./index";
 
-console.log(scan("C:\\"));
+//console.log(scan("C:\\"));
+scan("/home/benjamin");
