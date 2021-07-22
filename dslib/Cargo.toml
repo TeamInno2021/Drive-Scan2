@@ -20,6 +20,9 @@ napi-build = "1.1.0"
 
 [target.'cfg(windows)'.dependencies]
 # windows dependencies
+bitflags = "1.2.1"
+num-derive = "0.3.3"
+num-traits = "0.2.14"
 winapi = { version = "0.3.9", features = ["std", "impl-default", "fileapi", "winbase"] }
 
 [target.'cfg(unix)'.dependencies]
