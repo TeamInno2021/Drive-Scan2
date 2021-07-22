@@ -7,7 +7,7 @@ use winapi::um::fileapi::ReadFile;
 
 /// NTFS boot sector information
 /// See http://ntfs.com/ntfs-partition-boot-sector.htm for extra information
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 #[repr(packed(1))]
 pub struct BootSector {
     _alignment: [u8; 3],
@@ -20,22 +20,6 @@ pub struct BootSector {
     pub mftmirr_cluster: u64,
     pub clusters_per_mft_record: u32,
     pub clusters_per_index_record: u32,
-}
-
-impl fmt::Debug for BootSector {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        unsafe {
-            f.debug_struct("BootSector")
-                .field("bytes_per_sector", &self.bytes_per_sector)
-                .field("sectors_per_cluster", &self.sectors_per_cluster)
-                .field("total_sectors", &self.total_sectors)
-                .field("mft_cluster", &self.mft_cluster)
-                .field("mftmirr_cluster", &self.mftmirr_cluster)
-                .field("clusters_per_mft_record", &self.clusters_per_mft_record)
-                .field("clusters_per_index_record", &self.clusters_per_index_record)
-                .finish()
-        }
-    }
 }
 
 impl BootSector {

@@ -16,7 +16,6 @@ pub fn verify(dir: &Path) -> Result<bool, Box<dyn ::std::error::Error>> {
 
 pub fn scan(dir: PathBuf) -> Result<File, Box<dyn ::std::error::Error>> {
     let drive = DriveInfo::parse(dir.clone())?;
-    info!("Fetched metadata for {:#?}", drive);
 
     let _nodes = mft::process(drive)?;
 

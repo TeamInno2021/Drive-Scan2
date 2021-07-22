@@ -17,7 +17,8 @@ const ROOT: u32 = 5;
 
 #[derive(Debug, Default)]
 pub struct MftNode {
-    pub attributes: MftNodeAttributes,
+    /// MftNodeAttributes bitflag
+    pub attributes: usize,
     pub parent_node_index: Option<u32>,
     pub size: Option<u64>,
     pub name_index: Option<i32>,
@@ -99,7 +100,7 @@ fn process_record(
     node.parent_node_index = Some(ROOT);
 
     if record.flags & 2 == 2 {
-        node.attributes |= MftNodeAttributes::DIRECTORY;
+        node.attributes |= MftNodeAttributes::Directory as usize;
     }
 
     // ----- Process attributes
@@ -174,7 +175,7 @@ fn process_record(
                         Some(attribute_filename.parent_directory.inode_number_low);
 
                     if attribute_filename.name_type == 1 || node.name_index == Some(0) {
-                        println!("{}", unsafe { *&attribute_filename.name });
+                        println!("{}", { attribute_filename.name });
                         // L: 1007
                         unimplemented!(); // todo
                     }
@@ -191,24 +192,7 @@ fn process_record(
                             .unwrap()
                     };
 
-                    // fixme this does not work either
-                    // println!("{}", unsafe {
-                    //     *&attribute_standardinformation.file_attributes as u64
-                    // });
-                    // let num = unsafe { *&attribute_standardinformation.file_attributes as usize };
-                    // // println!("{:?}", unsafe {
-                    //     (num as *const usize as *const MftNodeAttributes)
-                    //         .as_ref()
-                    //         .unwrap()
-                    // });
-                    // todo
-                    // fixme causes segfault when trying to print node object
-                    // node.attributes |= *unsafe {
-                    //     (attribute_standardinformation.file_attributes as *const usize
-                    //         as *const MftNodeAttributes)
-                    //         .as_ref()
-                    //         .unwrap()
-                    // };
+                    node.attributes |= attribute_standardinformation.file_attributes as usize;
                 }
                 Some(MftNodeAttributeType::Data) => {
                     node.size = Some(resident_attribute.value_length as u64);

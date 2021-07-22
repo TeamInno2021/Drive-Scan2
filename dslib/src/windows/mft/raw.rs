@@ -1,7 +1,4 @@
-use bitflags::bitflags;
 use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
-use std::convert::TryFrom;
 
 // ---------- MFT ----------
 
@@ -44,70 +41,24 @@ pub struct MftRecord {
 
 // ---------- MFT Attribute ----------
 
-bitflags! {
-    #[derive(Default,)]
-    pub struct MftNodeAttributes: usize {
-        const NULL = 0;
-
-        const READ_ONLY = 1 << 0;
-        const HIDDEN = 1 << 1;
-        const SYSTEM = 1 << 2;
-        const DIRECTORY = 1 << 3;
-        const ARCHIVE = 1 << 4;
-        const DEVICE = 1 << 5;
-        const NORMAL = 1 << 6;
-        const TEMPORARY = 1 << 7;
-        const SPARSE_FILE = 1 << 8;
-        const REPARSE_POINT = 1 << 9;
-        const COMPRESSED = 1 << 10;
-        const OFFLINE =  1 << 11;
-        const NOT_CONTENT_INDEXED = 1 << 12;
-        const ENCRYPTED = 1 << 13;
-    }
+#[derive(Debug, Clone, Copy)]
+#[allow(dead_code)]
+pub enum MftNodeAttributes {
+    ReadOnly = 1 << 0,
+    Hidden = 1 << 1,
+    System = 1 << 2,
+    Directory = 1 << 3,
+    Archive = 1 << 4,
+    Device = 1 << 5,
+    Normal = 1 << 6,
+    Temporary = 1 << 7,
+    SparseFile = 1 << 8,
+    ReparsePoint = 1 << 9,
+    Compressed = 1 << 10,
+    Offline = 1 << 11,
+    NotContentIndexed = 1 << 12,
+    Encrypted = 1 << 13,
 }
-
-// impl FromPrimitive for MftNodeAttributes {
-//     fn from_u64(n: u64) -> Option<Self> {
-//         if n == 0 {
-//             Some(MftNodeAttributes::NULL)
-//         } else if n == 1 << 0 {
-//             Some(MftNodeAttributes::READ_ONLY)
-//         } else if n == 1 << 1 {
-//             Some(MftNodeAttributes::HIDDEN)
-//         } else if n == 1 << 2 {
-//             Some(MftNodeAttributes::SYSTEM)
-//         } else if n == 1 << 3 {
-//             Some(MftNodeAttributes::DIRECTORY)
-//         } else if n == 1 << 4 {
-//             Some(MftNodeAttributes::ARCHIVE)
-//         } else if n == 1 << 5 {
-//             Some(MftNodeAttributes::DEVICE)
-//         } else if n == 1 << 6 {
-//             Some(MftNodeAttributes::NORMAL)
-//         } else if n == 1 << 7 {
-//             Some(MftNodeAttributes::TEMPORARY)
-//         } else if n == 1 << 8 {
-//             Some(MftNodeAttributes::SPARSE_FILE)
-//         } else if n == 1 << 9 {
-//             Some(MftNodeAttributes::REPARSE_POINT)
-//         } else if n == 1 << 10 {
-//             Some(MftNodeAttributes::COMPRESSED)
-//         } else if n == 1 << 11 {
-//             Some(MftNodeAttributes::OFFLINE)
-//         } else if n == 1 << 12 {
-//             Some(MftNodeAttributes::NOT_CONTENT_INDEXED)
-//         } else if n == 1 << 13 {
-//             Some(MftNodeAttributes::ENCRYPTED)
-//         } else {
-//             None
-//         }
-//     }
-
-//     /// Note that this method will always return `None`, use an unsigned function instead
-//     fn from_i64(n: i64) -> Option<Self> {
-//         MftNodeAttributes::from_u64(u64::try_from(n).ok()?)
-//     }
-// }
 
 #[derive(Debug, Clone, Copy, FromPrimitive)]
 pub enum MftNodeAttributeType {
