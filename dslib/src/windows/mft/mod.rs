@@ -175,7 +175,7 @@ fn process_record(
                         Some(attribute_filename.parent_directory.inode_number_low);
 
                     if attribute_filename.name_type == 1 || node.name_index == Some(0) {
-                        println!("{}", { attribute_filename.name });
+                        trace!("Name: {}", { attribute_filename.name });
                         // L: 1007
                         unimplemented!(); // todo
                     }
@@ -200,7 +200,18 @@ fn process_record(
                 _ => (),
             }
         } else {
-            // todo
+            let nonresident_attribute = unsafe {
+                (attribute as *mut MftNodeAttribute as *mut MftNodeNonResidentAttribute)
+                    .as_ref()
+                    .unwrap()
+            };
+
+            if attribute.attribute_type == MftNodeAttributeType::Data as u32 && node.size == Some(0)
+            {
+                node.size = Some(nonresident_attribute.data_size);
+
+                unimplemented!(); // todo
+            }
         }
 
         offset += attribute.length as u64;
