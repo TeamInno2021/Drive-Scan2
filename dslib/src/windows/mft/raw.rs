@@ -1,14 +1,9 @@
-#[allow(dead_code)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MftRecordType {
-    /// 'FILE' in ASCII
-    File = 0x454c4946,
-}
+pub const FILE: u32 = 0x454c4946;
 
 #[derive(Debug, Clone, Copy)]
 #[repr(packed(1))]
 pub struct MftRecordHeader {
-    pub ty: MftRecordType,
+    pub ty: u32, // 0x454c4946 = 'FILE'
     pub usa_offset: u16,
     pub usa_count: u16,
     pub lsn: u64,
@@ -34,4 +29,7 @@ pub struct MftRecord {
     pub bytes_allocated: u32,
     pub base_file_record: INodeMeta,
     pub next_attribute_number: u16,
+    _padding: u16,
+    pub mft_record_number: u32,
+    pub update_seq_num: u16,
 }
