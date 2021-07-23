@@ -34,13 +34,32 @@ pub struct Fragment {
     pub next_vcn: u64,
 }
 
-#[derive(Debug)]
+// #[derive(Debug)]
 pub struct Stream {
     pub name_index: u32,
     pub ty: MftNodeAttributeType,
     pub size: u64,
     pub clusters: u64,
-    pub fragments: Vec<Fragment>,
+    fragments: Option<Vec<Fragment>>,
+}
+
+impl Stream {
+    pub fn push_fragment(&mut self, fragment: Fragment) {
+        if self.fragments.is_none() {
+            self.fragments = Some(vec![fragment]);
+        } else if let Some(ref mut fragments) = self.fragments {
+            fragments.push(fragment);
+        }
+    }
+
+    pub fn fragments(&mut self) -> &[Fragment] {
+        if let Some(ref mut fragments) = self.fragments {
+            fragments
+        } else {
+            self.fragments = Some(vec![Fragment::default(); 5]);
+            self.fragments()
+        }
+    }
 }
 
 pub fn find_stream(
@@ -129,7 +148,6 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
             mft.as_mut_ptr() as *mut c_void,
             drive.bytes_per_mft_record as u32,
             &mut size,
-            // &mut Overlapped::new(offset) as *mut Overlapped as *mut c_void as *mut OVERLAPPED,
             &mut OVERLAPPED {
                 u: overlap,
                 hEvent: ptr::null_mut(),
@@ -155,39 +173,66 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
     // info!("Read $MFT record: {:#?}", mft_record);
 
     let mft_node = process_record(&drive, &mut mft, &mft_record, &mut streams, true)?;
-    // info!("{:#?}", mft_node);
-    // info!("{:#?}", streams);
 
     // ----- Process inode bitmap data
-    // let mut vcn: u64 = 0;
-    // let mut max_mft_bitmap_bytes: u64 = 0;
+    let mut vcn: u64 = 0;
+    let mut max_mft_bitmap_bytes: u64 = 0;
 
-    // let stream = find_stream(&mut streams, MftNodeAttributeType::Bitmap, None)
-    //     .ok_or_else(|| OsError::from("bitmap data not found"))?;
+    let stream = find_stream(&mut streams, MftNodeAttributeType::Bitmap, None)
+        .ok_or_else(|| OsError::from("bitmap data not found"))?;
 
-    // for fragment in &stream.fragments {
-    //     println!("{}", { fragment.lcn });
-    //     if fragment.lcn != VIRTUALFRAGMENT {
-    //         max_mft_bitmap_bytes += (fragment.next_vcn - vcn)
-    //             * drive.boot.bytes_per_sector as u64
-    //             * drive.boot.sectors_per_cluster as u64;
-    //     }
+    for fragment in stream.fragments() {
+        if fragment.lcn != VIRTUALFRAGMENT {
+            max_mft_bitmap_bytes += (fragment.next_vcn - vcn)
+                * drive.boot.bytes_per_sector as u64
+                * drive.boot.sectors_per_cluster as u64;
+        }
 
-    //     vcn = fragment.next_vcn;
-    // }
+        vcn = fragment.next_vcn;
+    }
+
+    let mut bitmap_data: Vec<u8> = vec![0; max_mft_bitmap_bytes as usize];
+    vcn = 0;
+    let mut real_vcn: u64 = 0;
+
+    for fragment in stream.fragments() {
+        if fragment.lcn != VIRTUALFRAGMENT {
+            unsafe {
+                let mut overlap = OVERLAPPED_u::default();
+                overlap.s_mut().Offset = fragment.lcn as u32
+                    * drive.boot.bytes_per_sector as u32
+                    * drive.boot.sectors_per_cluster as u32;
+
+                if ReadFile(
+                    drive.handle,
+                    bitmap_data.as_mut_ptr().wrapping_add(
+                        real_vcn as usize
+                            * drive.boot.bytes_per_sector as usize
+                            * drive.boot.sectors_per_cluster as usize,
+                    ) as *mut c_void,
+                    (fragment.next_vcn - vcn) as u32
+                        * drive.boot.bytes_per_sector as u32
+                        * drive.boot.sectors_per_cluster as u32,
+                    ptr::null_mut(),
+                    &mut OVERLAPPED {
+                        u: overlap,
+                        hEvent: ptr::null_mut(),
+                        Internal: 0,
+                        InternalHigh: 0,
+                    },
+                ) == 0
+                {
+                    return Err(get_last_error().into());
+                }
+            }
+            real_vcn += fragment.next_vcn - vcn;
+        }
+
+        vcn = fragment.next_vcn;
+    }
 
     // ----- Begin processing the actual mft records
-
-    // // for mft_index in 1..32 {
-    //     let rec = unsafe {
-    //         (mft.as_mut_ptr()
-    //             .wrapping_add(drive.bytes_per_mft_record as usize) as *mut MftRecord)
-    //             .as_ref()
-    //             .unwrap()
-    //     };
-    //     trace!("{:#?}", rec);
-    //     trace!("{:#?}", process_record(&drive, &mut mft, &rec));
-    // // }
+    // todo
 
     Ok(Vec::default())
 }
@@ -358,7 +403,7 @@ fn process_record(
                         ty,
                         size: nonresident_attribute.data_size,
                         clusters: 0,
-                        fragments: vec![Fragment::default(); 5],
+                        fragments: None,
                     });
                     streams.last_mut().unwrap()
                 }
@@ -417,7 +462,7 @@ fn process_record(
                         stream.clusters += run_length as u64;
                     }
 
-                    stream.fragments.push(Fragment {
+                    stream.push_fragment(Fragment {
                         lcn: if run_offset == 0 {
                             VIRTUALFRAGMENT
                         } else {
