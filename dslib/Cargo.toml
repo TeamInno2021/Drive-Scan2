@@ -5,7 +5,11 @@ authors = []
 edition = "2018"
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["lib", "cdylib"]
+
+[[bin]]
+path = "src/main.rs"
+name = "dslib-dev"
 
 [dependencies]
 napi-derive = "1.1.0"

@@ -39,10 +39,7 @@ pub struct ScanResult {
     files: File,
 }
 
-#[js_function(1)]
-fn scan(ctx: CallContext) -> Result<JsUnknown> {
-    let dir: PathBuf = ctx.get::<JsString>(0)?.into_utf8()?.as_str()?.into();
-
+pub fn _scan(dir: PathBuf) -> ::std::result::Result<ScanResult, Box<dyn ::std::error::Error>> {
     let res = match interface::verify(&dir) {
         Ok(v) => {
             if v {
@@ -63,10 +60,20 @@ fn scan(ctx: CallContext) -> Result<JsUnknown> {
     };
 
     match res {
-        Ok(f) => ctx.env.to_js_value(&ScanResult {
+        Ok(f) => Ok(ScanResult {
             base: dir,
             files: f,
         }),
+        Err(e) => Err(e),
+    }
+}
+
+#[js_function(1)]
+fn scan(ctx: CallContext) -> Result<JsUnknown> {
+    let dir: PathBuf = ctx.get::<JsString>(0)?.into_utf8()?.as_str()?.into();
+
+    match _scan(dir) {
+        Ok(f) => ctx.env.to_js_value(&f),
         Err(e) => Err(napi::Error::new(napi::Status::Unknown, e.to_string())),
     }
 }
