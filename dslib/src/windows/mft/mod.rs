@@ -100,7 +100,7 @@ pub unsafe fn process_run_length(
         }
     }
 
-    Ok(mem::transmute::<[u8; 8], i64>(run_length).to_le())
+    Ok(mem::transmute::<[u8; 8], i64>(run_length).to_le()) // todo replace with i64::from_le_bytes()
 }
 
 pub unsafe fn process_run_offset(
@@ -133,7 +133,7 @@ pub unsafe fn process_run_offset(
         }
     }
 
-    Ok(mem::transmute::<[u8; 8], i64>(run_offset).to_le())
+    Ok(mem::transmute::<[u8; 8], i64>(run_offset).to_le()) // todo replace with i64::from_le_bytes()
 }
 
 /// Process the mft of a drive
@@ -362,6 +362,7 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
 
         let mft_node = process_record(&drive, &mut mft, &mft_record, &mut streams, true)?;
         */
+
         let record = unsafe {
             (mft.as_mut_ptr().wrapping_add(
                 (node_index as u64 - block_start) as usize * drive.bytes_per_mft_record as usize,
@@ -370,6 +371,9 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
                 .unwrap()
         };
 
+        println!("{}", { record.flags });
+
+        // trace!("a");
         let node = process_record(
             &drive,
             mft.as_mut_ptr().wrapping_add(
@@ -379,6 +383,7 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
             &mut streams,
             false,
         );
+        // trace!("b");
 
         match node {
             Ok(node) => {
@@ -407,11 +412,14 @@ fn process_record(
     streams: &mut Vec<Stream>,
     is_mftnode: bool,
 ) -> Result<MftNode, OsError> {
+    // trace!("a:inner");
+
     // Sanity checks
     {
         let base = ((record.base_file_record.inode_number_high as u64) << 32)
             + record.base_file_record.inode_number_low as u64; // note that this should always be 0
 
+        // trace!("{:#?}", { record.flags });
         // Ensure this is an active file record
         if base != 0 || record.header.ty != raw::FILE || record.flags & 1 != 1 {
             return Err("unable to interpret mft record".into());
@@ -424,6 +432,8 @@ fn process_record(
             return Err("record large than buffer, the mft may be corrupt".into());
         }
     }
+
+    // trace!("a:outer");
 
     // ---------- Process node
 

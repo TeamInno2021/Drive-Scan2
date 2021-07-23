@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::ptr;
 
 use super::winapi::{get_last_error, winapi_call, winapi_str};
-use winapi::um::fileapi::{CreateFileW, GetVolumeNameForVolumeMountPointW, OPEN_EXISTING};
+use winapi::um::fileapi::{CreateFileA, GetVolumeNameForVolumeMountPointW, OPEN_EXISTING};
 use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
 use winapi::um::winnt::{FILE_SHARE_READ, FILE_SHARE_WRITE, GENERIC_READ};
 
@@ -45,7 +45,7 @@ impl DriveInfo {
             .next()
             .unwrap();
 
-        let volume = winapi_call(
+        let mut volume = winapi_call(
             50_usize,
             |volume, size| unsafe {
                 GetVolumeNameForVolumeMountPointW(winapi_str(&root), volume, size as u32)
@@ -57,9 +57,12 @@ impl DriveInfo {
         .trim_end_matches('\\') // remove trailing backslashes
         .to_string();
 
+        // Manually add a null byte because the volume handle returned from GetVolumeNameForVolumeMountPointW does not have onr
+        volume.push('\0');
+
         let handle = unsafe {
-            CreateFileW(
-                winapi_str(&volume),
+            CreateFileA(
+                volume.as_ptr() as *const i8,
                 GENERIC_READ,
                 FILE_SHARE_READ | FILE_SHARE_WRITE,
                 ptr::null_mut(),
