@@ -57,7 +57,8 @@ impl DriveInfo {
         .trim_end_matches('\\') // remove trailing backslashes
         .to_string();
 
-        // Manually add a null byte because the volume handle returned from GetVolumeNameForVolumeMountPointW does not have onr
+        // Because we convert the volume name from a c-string into a rust string the null byte at the end gets removed,
+        // so we have to manually add it back before passing it to the createfile method
         volume.push('\0');
 
         let handle = unsafe {
