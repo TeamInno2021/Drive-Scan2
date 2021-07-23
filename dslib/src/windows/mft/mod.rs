@@ -7,13 +7,16 @@ use raw::*;
 
 use num_traits::FromPrimitive;
 use std::ffi::c_void;
-use std::ptr;
+use std::{mem, ptr};
 
 use winapi::um::fileapi::ReadFile;
 use winapi::um::minwinbase::{OVERLAPPED_u, OVERLAPPED};
 
 /// Special identifier for the root directory
 const ROOT: u32 = 5;
+
+/// Virtual fragment identifier
+const VIRTUALFRAGMENT: u64 = u64::MAX;
 
 #[derive(Debug, Default)]
 pub struct MftNode {
@@ -24,8 +27,94 @@ pub struct MftNode {
     pub name_index: Option<i32>,
 }
 
+#[derive(Default, Debug, Clone, Copy)]
+#[repr(packed(1))]
+pub struct Fragment {
+    pub lcn: u64,
+    pub next_vcn: u64,
+}
+
+#[derive(Debug)]
+pub struct Stream {
+    pub name_index: u32,
+    pub ty: MftNodeAttributeType,
+    pub size: u64,
+    pub clusters: u64,
+    pub fragments: Vec<Fragment>,
+}
+
+pub fn find_stream(
+    streams: &mut [Stream],
+    ty: MftNodeAttributeType,
+    name_index: Option<u32>,
+) -> Option<&mut Stream> {
+    for stream in streams {
+        if stream.ty == ty && stream.name_index == name_index.unwrap_or(stream.name_index) {
+            return Some(stream);
+        }
+    }
+
+    None
+}
+
+pub unsafe fn process_run_length(
+    run_data: *mut u8,
+    run_data_length: u32,
+    run_length_size: i32,
+    index: &mut u32,
+) -> Result<i64, OsError> {
+    let mut run_length: [u8; 8] = [0; 8]; // i64
+
+    for i in 0..run_length_size {
+        run_length[i as usize] = *run_data.wrapping_add(*index as usize);
+
+        *index += 1;
+        if *index >= run_data_length {
+            return Err(OsError::from(
+                "data is longer than buffer, the mft may be corrupt",
+            ));
+        }
+    }
+
+    Ok(mem::transmute::<[u8; 8], i64>(run_length).to_le())
+}
+
+pub unsafe fn process_run_offset(
+    run_data: *mut u8,
+    run_data_length: u32,
+    run_offset_size: i32,
+    index: &mut u32,
+) -> Result<i64, OsError> {
+    let mut run_offset: [u8; 8] = [0; 8]; // i64
+
+    let mut i: usize = 0;
+    while (i as i32) < run_offset_size {
+        run_offset[i] = *run_data.wrapping_add(*index as usize);
+
+        *index += 1;
+        if *index >= run_data_length {
+            return Err(OsError::from(
+                "data is longer than buffer, the mft may be corrupt",
+            ));
+        }
+
+        i += 1;
+    }
+
+    // Process negative values
+    if run_offset[i - 1] >= 0x80 {
+        while i < 8 {
+            run_offset[i] = 0xFF;
+            i += 1;
+        }
+    }
+
+    Ok(mem::transmute::<[u8; 8], i64>(run_offset).to_le())
+}
+
+/// Process the mft of a drive
 pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
-    // Read the $MFT record, this is always the first entry in the MFT table and acts as a record of the files in the volume
+    // ----- Read the $MFT record, this is always the first entry in the MFT table and acts as a record of the files in the volume
     let mut mft: Vec<u8> = Vec::with_capacity(256 * 1024); // 256kb
 
     unsafe {
@@ -59,12 +148,46 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
         mft.set_len(size as usize);
     }
 
-    // Process the $MFT record
-    let mft_record = unsafe { (mft.as_mut_ptr() as *mut MftRecord).as_ref().unwrap() };
-    info!("Read $MFT record: {:#?}", mft_record);
+    let mut streams: Vec<Stream> = Vec::new();
 
-    let node = process_record(&drive, &mut mft, &mft_record)?;
-    info!("{:#?}", node);
+    // ---------- Process the $MFT record
+    let mft_record = unsafe { (mft.as_mut_ptr() as *mut MftRecord).as_ref().unwrap() };
+    // info!("Read $MFT record: {:#?}", mft_record);
+
+    let mft_node = process_record(&drive, &mut mft, &mft_record, &mut streams, true)?;
+    // info!("{:#?}", mft_node);
+    // info!("{:#?}", streams);
+
+    // ----- Process inode bitmap data
+    // let mut vcn: u64 = 0;
+    // let mut max_mft_bitmap_bytes: u64 = 0;
+
+    // let stream = find_stream(&mut streams, MftNodeAttributeType::Bitmap, None)
+    //     .ok_or_else(|| OsError::from("bitmap data not found"))?;
+
+    // for fragment in &stream.fragments {
+    //     println!("{}", { fragment.lcn });
+    //     if fragment.lcn != VIRTUALFRAGMENT {
+    //         max_mft_bitmap_bytes += (fragment.next_vcn - vcn)
+    //             * drive.boot.bytes_per_sector as u64
+    //             * drive.boot.sectors_per_cluster as u64;
+    //     }
+
+    //     vcn = fragment.next_vcn;
+    // }
+
+    // ----- Begin processing the actual mft records
+
+    // // for mft_index in 1..32 {
+    //     let rec = unsafe {
+    //         (mft.as_mut_ptr()
+    //             .wrapping_add(drive.bytes_per_mft_record as usize) as *mut MftRecord)
+    //             .as_ref()
+    //             .unwrap()
+    //     };
+    //     trace!("{:#?}", rec);
+    //     trace!("{:#?}", process_record(&drive, &mut mft, &rec));
+    // // }
 
     Ok(Vec::default())
 }
@@ -73,6 +196,8 @@ fn process_record(
     drive: &DriveInfo,
     buffer: &mut [u8],
     record: &MftRecord,
+    streams: &mut Vec<Stream>,
+    is_mftnode: bool,
 ) -> Result<MftNode, OsError> {
     // Sanity checks
     {
@@ -94,10 +219,11 @@ fn process_record(
 
     // ---------- Process node
 
-    let mut node = MftNode::default();
-
     // Default this entry to the root
-    node.parent_node_index = Some(ROOT);
+    let mut node = MftNode {
+        parent_node_index: Some(ROOT),
+        ..Default::default()
+    };
 
     if record.flags & 2 == 2 {
         node.attributes |= MftNodeAttributes::Directory as usize;
@@ -209,8 +335,97 @@ fn process_record(
             if attribute.attribute_type == MftNodeAttributeType::Data as u32 && node.size == Some(0)
             {
                 node.size = Some(nonresident_attribute.data_size);
+            }
 
-                unimplemented!(); // todo
+            let name_index = 0;
+
+            if attribute.name_length > 0 {
+                unimplemented!(); // todo L: 1044
+            }
+
+            let ty = MftNodeAttributeType::from_u32(attribute.attribute_type)
+                .expect("invalid node attribute");
+            let stream = find_stream(streams, ty, Some(name_index));
+
+            let stream = match stream {
+                Some(stream) => {
+                    stream.size = nonresident_attribute.data_size;
+                    stream
+                }
+                None => {
+                    streams.push(Stream {
+                        name_index,
+                        ty,
+                        size: nonresident_attribute.data_size,
+                        clusters: 0,
+                        fragments: vec![Fragment::default(); 5],
+                    });
+                    streams.last_mut().unwrap()
+                }
+            };
+
+            if is_mftnode {
+                // Process fragments
+                let run_data_length =
+                    attribute.length - nonresident_attribute.run_array_offset as u32;
+
+                let mut index: u32 = 0;
+                let mut lcn: i64 = 0;
+                let mut vcn: i64 = nonresident_attribute.starting_vcn as i64;
+                let mut run_offset_size: u32;
+                let mut run_length_size: u32;
+
+                let run_data = buffer
+                    .as_mut_ptr()
+                    .wrapping_add(record.attribute_offset as usize)
+                    .wrapping_add(offset as usize)
+                    .wrapping_add(nonresident_attribute.run_array_offset as usize);
+
+                while unsafe { *(run_data.wrapping_add(index as usize) as *const u8) } != 0 {
+                    let data = unsafe { *(run_data.wrapping_add(index as usize) as *const u8) };
+
+                    run_length_size = (data & 0x0F) as u32;
+                    run_offset_size = ((data & 0xF0) >> 4) as u32;
+
+                    index += 1;
+                    if index >= run_data_length {
+                        return Err("data is longer than buffer, the mft may be corrupt".into());
+                    }
+
+                    let run_length: i64 = unsafe {
+                        process_run_length(
+                            run_data,
+                            run_data_length,
+                            run_length_size as i32,
+                            &mut index,
+                        )?
+                    };
+
+                    let run_offset: i64 = unsafe {
+                        process_run_offset(
+                            run_data,
+                            run_data_length,
+                            run_offset_size as i32,
+                            &mut index,
+                        )?
+                    };
+
+                    lcn += run_offset;
+                    vcn += run_length;
+
+                    if run_offset != 0 {
+                        stream.clusters += run_length as u64;
+                    }
+
+                    stream.fragments.push(Fragment {
+                        lcn: if run_offset == 0 {
+                            VIRTUALFRAGMENT
+                        } else {
+                            lcn as u64
+                        },
+                        next_vcn: vcn as u64,
+                    });
+                }
             }
         }
 

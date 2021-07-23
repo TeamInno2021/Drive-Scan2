@@ -60,7 +60,7 @@ pub enum MftNodeAttributes {
     Encrypted = 1 << 13,
 }
 
-#[derive(Debug, Clone, Copy, FromPrimitive)]
+#[derive(Debug, Clone, Copy, FromPrimitive, PartialEq, Eq)]
 pub enum MftNodeAttributeType {
     Invalid = 0x00,
     StandardInformation = 0x10,
@@ -113,7 +113,7 @@ pub struct MftNodeResidentAttribute {
 #[repr(packed(1))]
 pub struct MftNodeNonResidentAttribute {
     pub attribute: MftNodeAttribute,
-    pub starting_vsc: u64,
+    pub starting_vcn: u64,
     pub last_vsc: u64,
     pub run_array_offset: u16,
     pub compression_unit: u8,
