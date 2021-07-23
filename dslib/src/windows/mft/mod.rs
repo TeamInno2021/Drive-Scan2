@@ -7,6 +7,8 @@ use raw::*;
 
 use num_traits::FromPrimitive;
 use std::ffi::c_void;
+use std::ffi::OsString;
+use std::os::windows::prelude::OsStringExt;
 use std::{mem, ptr};
 
 use winapi::um::fileapi::ReadFile;
@@ -19,7 +21,7 @@ const ROOT: u32 = 5;
 const VIRTUALFRAGMENT: u64 = u64::MAX;
 
 /// Mft buffer size
-const BUF_SIZE: usize = 256 * 1024;
+const BUF_SIZE: usize = 256 * 1024; // 256 kb
 
 #[derive(Debug, Default, Clone)]
 pub struct MftNode {
@@ -232,7 +234,6 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
         }
 
         vcn = fragment.next_vcn;
-        println!("{}", vcn);
     }
 
     // ----- Begin processing the actual mft records
@@ -252,14 +253,13 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
     // Store the next node index so we can directly write to it when we encounter a new node
     let mut next_node_index: usize = 1;
 
-    let mut block_start: u64 = 0;
-    let mut block_end: u64 = 0;
+    let block_start: u64 = 0;
+    let block_end: u64 = 0;
     let mut real_vcn: u64 = 0;
     let mut vcn: u64 = 0;
 
     let mut total_bytes_read: u64 = 0;
-    let mut fragment_index: u32 = 0;
-    let mut fragment_count = data_stream.fragments().len();
+    let fragment_index: u32 = 0;
 
     // todo start timer
 
@@ -274,7 +274,6 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
         }
 
         if node_index >= block_end as u32 {
-            // todo read chunk
             // Read the next chunk
 
             {
@@ -381,15 +380,22 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
             false,
         );
 
-        if let Ok(node) = node {
-            nodes[next_node_index] = node;
-            next_node_index += 1;
+        match node {
+            Ok(node) => {
+                nodes[next_node_index] = node;
+                next_node_index += 1;
+            }
+            Err(err) => {
+                warn!("invalid node: {:?}", err);
+            }
         }
     }
 
     nodes.truncate(next_node_index - 1);
 
     // todo end timer
+
+    info!("Read {} bytes", total_bytes_read);
 
     Ok(nodes)
 }
@@ -499,6 +505,7 @@ fn process_record(
                         Some(attribute_filename.parent_directory.inode_number_low);
 
                     // Print file name
+                    // fixme temp
                     {
                         print!("File name ");
                         for c_index in 0..attribute_filename.name_length * 2
@@ -507,14 +514,21 @@ fn process_record(
                         {
                             print!("{}", attribute_filename.name[c_index as usize] as char);
                         }
-                        println!(" with size {}MiB", {
-                            attribute_filename.data_size / 1024 / 1024
-                        });
+                        println!(" with size {}KiB", { attribute_filename.data_size / 1024 });
                     }
 
                     if attribute_filename.name_type == 1 || node.name_index == Some(0) {
-                        // L: 1007
-                        unimplemented!(); // todo
+                        //fixme improve
+                        // print!("File name ");
+                        // for c_index in 0..attribute_filename.name_length * 2
+                        // // note multiplied by two because of utf-16 double byte characters
+                        // // step two bytes at a time and parse as utf 16
+                        // {
+                        //     print!("{}", attribute_filename.name[c_index as usize] as char);
+                        // }
+                        // println!(" with size {}MiB", {
+                        //     attribute_filename.data_size / 1024 / 1024
+                        // });
                     }
                 }
                 Some(MftNodeAttributeType::StandardInformation) => {
@@ -550,7 +564,21 @@ fn process_record(
             let name_index = 0;
 
             if attribute.name_length > 0 {
-                unimplemented!(); // todo L: 1044
+                // fixme improve
+                // this is a directory
+                let name_pos = buffer
+                    .wrapping_add(record.attribute_offset as usize)
+                    .wrapping_add(offset as usize)
+                    .wrapping_add(attribute.name_offset as usize);
+
+                let name: &[u16] = unsafe {
+                    ::std::slice::from_raw_parts(
+                        name_pos as *const u16,
+                        attribute.name_length as usize,
+                    )
+                };
+                let name = OsString::from_wide(name);
+                println!("File name {:?}", name);
             }
 
             let ty = MftNodeAttributeType::from_u32(attribute.attribute_type)
