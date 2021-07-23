@@ -40,6 +40,8 @@ pub struct ScanResult {
 }
 
 pub fn _scan(dir: PathBuf) -> ::std::result::Result<ScanResult, Box<dyn ::std::error::Error>> {
+    tracing_subscriber::fmt::init();
+
     let res = match interface::verify(&dir) {
         Ok(v) => {
             if v {
@@ -80,7 +82,6 @@ fn scan(ctx: CallContext) -> Result<JsUnknown> {
 
 #[module_exports]
 fn init(mut exports: JsObject) -> Result<()> {
-    tracing_subscriber::fmt::init();
     exports.create_named_method("scan", scan)?;
     Ok(())
 }
