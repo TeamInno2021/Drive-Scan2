@@ -141,7 +141,7 @@ pub struct MftNodeAttributeFileName {
     pub name_length: u8,
     /// NTFS = 0x01, DOS = 0x02
     pub name_type: u8,
-    pub name: char,
+    pub name: [u8; winapi::shared::minwindef::MAX_PATH], // todo read up to name_type then read name_length bytes manually
 }
 
 // ----- MFT MftNodeAttributeType::StandardInformation data -----

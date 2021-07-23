@@ -290,8 +290,6 @@ fn process_record(
                 .unwrap()
         };
 
-        // trace!("Attribute {} + {}", offset, unsafe { *&attribute.length });
-
         // Exit loop at end marker
         if (offset + 4 <= buf_length)
             && *unsafe {
@@ -345,8 +343,21 @@ fn process_record(
                     node.parent_node_index =
                         Some(attribute_filename.parent_directory.inode_number_low);
 
+                    // Print file name
+                    {
+                        print!("File name ");
+                        for c_index in 0..attribute_filename.name_length * 2
+                        // note multiplied by two because of utf-16 double byte characters
+                        // step two bytes at a time and parse as utf 16
+                        {
+                            print!("{}", attribute_filename.name[c_index as usize] as char);
+                        }
+                        println!(" with size {}MiB", {
+                            attribute_filename.data_size / 1024 / 1024
+                        });
+                    }
+
                     if attribute_filename.name_type == 1 || node.name_index == Some(0) {
-                        trace!("Name: {}", { attribute_filename.name });
                         // L: 1007
                         unimplemented!(); // todo
                     }
