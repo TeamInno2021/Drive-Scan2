@@ -204,9 +204,10 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
         if fragment.lcn != VIRTUALFRAGMENT {
             unsafe {
                 let mut overlap = OVERLAPPED_u::default();
-                overlap.s_mut().Offset = fragment.lcn as u32
-                    * drive.boot.bytes_per_sector as u32
-                    * drive.boot.sectors_per_cluster as u32;
+                overlap.s_mut().Offset = (fragment.lcn
+                    * drive.boot.bytes_per_sector as u64
+                    * drive.boot.sectors_per_cluster as u64)
+                    as u32;
 
                 if ReadFile(
                     drive.handle,
@@ -371,7 +372,7 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
                 .unwrap()
         };
 
-        println!("{}", { record.flags });
+        println!("Flags: {} \\", { record.flags });
 
         // trace!("a");
         let node = process_record(
