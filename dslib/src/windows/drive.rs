@@ -12,6 +12,8 @@ use winapi::um::winnt::{FILE_SHARE_READ, FILE_SHARE_WRITE, GENERIC_READ};
 
 #[derive(Debug)]
 pub struct DriveInfo {
+    /// The directory to scan
+    pub path: PathBuf,
     /// The root path of the drive
     pub root: String,
     /// The drive letter
@@ -90,6 +92,7 @@ impl DriveInfo {
         };
 
         Ok(DriveInfo {
+            path,
             root,
             letter,
             volume,
