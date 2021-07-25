@@ -13,6 +13,7 @@ use std::ffi::{c_void, OsString};
 use std::os::windows::prelude::OsStringExt;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
+use std::time::{Duration, Instant};
 use std::{mem, ptr};
 
 use winapi::um::fileapi::ReadFile;
@@ -291,7 +292,7 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
     let mut total_bytes_read: u64 = 0;
     let fragment_index: u32 = 0;
 
-    // todo start timer
+    let start_time = Instant::now();
 
     // Node that the node index starts at `1` to skip the $MFT entry
     for node_index in 1..max_inode {
@@ -435,7 +436,11 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
 
     // todo end timer
 
-    info!("Read {} mebibytes of data", total_bytes_read / 1024 / 1024);
+    info!(
+        "Read {} mebibytes of data in {} second(s)",
+        total_bytes_read / 1024 / 1024,
+        start_time.elapsed().as_secs()
+    );
     info!("Total nodes: {}", DEBUG.fetch_add(1, Ordering::SeqCst));
     info!("Total entries: {}", nodes.len());
     info!(

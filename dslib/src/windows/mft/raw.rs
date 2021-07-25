@@ -8,7 +8,7 @@ pub const FILE: u32 = 0x454c4946;
 #[repr(packed(1))]
 pub struct MftRecordHeader {
     /// 0x454c4946 = 'FILE'
-    pub ty: u32, // todo convert to enum type (must be able to resize enum)
+    pub ty: u32, // todo convert to enum type (must be able to resize enum) (looks like we can, see: https://github.com/rust-lang/log/blob/bd28b80a6d2b90cb9131e21bc602df68f4f72fdb/src/lib.rs#L375)
     pub usa_offset: u16,
     pub usa_count: u16,
     pub lsn: u64,
@@ -141,9 +141,9 @@ pub struct MftNodeAttributeFileName {
     pub name_length: u8,
     /// NTFS = 0x01, DOS = 0x02
     pub name_type: u8,
+    pub name: u16,
     // note that we multiply the path by two to take into account the double-byte unicode encoding
-    pub name: u16, // todo read up to name_type then read name_length bytes manually
-                   // pub name: [u8; winapi::shared::minwindef::MAX_PATH * 2 + 1], // todo read up to name_type then read name_length bytes manually
+    // pub name: [u8; winapi::shared::minwindef::MAX_PATH * 2 + 1], // todo read up to name_type then read name_length bytes manually
 }
 
 // ----- MFT MftNodeAttributeType::StandardInformation data -----
