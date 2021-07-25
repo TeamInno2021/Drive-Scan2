@@ -14,7 +14,7 @@ use std::os::windows::prelude::OsStringExt;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
-use std::{mem, ptr};
+use std::{cmp, mem, ptr};
 
 use winapi::um::fileapi::ReadFile;
 use winapi::um::minwinbase::{OVERLAPPED_u, OVERLAPPED};
@@ -392,6 +392,7 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
                 (node_index as u64 - block_start) as usize * drive.bytes_per_mft_record as usize,
             ),
         );
+        // e?;
         if e.is_err() {
             // fixme these errors should cause an error to be returned
             error!(
@@ -401,7 +402,6 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
             );
             continue;
         }
-        // e?;
 
         DEBUG.fetch_add(1, Ordering::SeqCst);
 
@@ -425,7 +425,15 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
 
         if let Some(node) = node {
             let index = DEBUG.fetch_sub(1, Ordering::SeqCst);
-            trace!("{} | {}", next_node_index, index);
+            if next_node_index % 100 == 0
+                || cmp::max(next_node_index, index)
+                    .checked_sub(10000)
+                    .unwrap_or_else(|| cmp::min(next_node_index, index))
+                    >= cmp::min(next_node_index, index)
+                || next_node_index > 200000
+            {
+                trace!("{} | {}", next_node_index, index);
+            }
             DEBUG.fetch_add(1, Ordering::SeqCst);
             nodes[next_node_index] = node;
             next_node_index += 1;
@@ -434,12 +442,15 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
 
     nodes.truncate(next_node_index - 1);
 
-    // todo end timer
-
+    let mut elapsed_time = start_time.elapsed().as_secs();
+    if elapsed_time == 0 {
+        elapsed_time = 1;
+    }
     info!(
-        "Read {} mebibytes of data in {} second(s)",
+        "Read {} MB of data in {} second(s) at a rate of {} MB/s",
         total_bytes_read / 1024 / 1024,
-        start_time.elapsed().as_secs()
+        elapsed_time,
+        (total_bytes_read / 1024 / 1024) / elapsed_time
     );
     info!("Total nodes: {}", DEBUG.fetch_add(1, Ordering::SeqCst));
     info!("Total entries: {}", nodes.len());
@@ -743,7 +754,7 @@ fn fix_mft_data(drive: &DriveInfo, mft: *mut u8) -> Result<(), OsError> {
         return Ok(());
     }
 
-    let buffer = mft as *mut u16; // utf-16 word buffer
+    let buffer = mft as *mut u16; 
     let update_sequence_array = mft.wrapping_add(record.header.usa_offset as usize) as *mut u16;
     let increment = drive.boot.bytes_per_sector as usize / mem::size_of::<u16>();
 
@@ -760,11 +771,24 @@ fn fix_mft_data(drive: &DriveInfo, mft: *mut u8) -> Result<(), OsError> {
             != unsafe { update_sequence_array.as_ref().unwrap() }
         {
             // fixme error misfires
+            debug!(
+                "{} != {} | {} -> {}",
+                unsafe { buffer.wrapping_add(index).as_ref().unwrap() },
+                unsafe { update_sequence_array.as_ref().unwrap() },
+                unsafe { *buffer.wrapping_add(index) },
+                unsafe { *update_sequence_array.wrapping_add(i as usize) }
+            );
+            // if unsafe { *buffer.wrapping_add(index) } == 2661 {
+            //     info!("{:#?}", record);
+            // }
             return Err("usa fixup word does not match usn, the mft may be corrupt".into());
         }
 
-        // Replace the last 2 bytes (utf-16) in the sector with the usa value
+        // Replace the last 2 bytes in the sector with the usa value
         unsafe { *buffer.wrapping_add(index) = *update_sequence_array.wrapping_add(i as usize) };
+        assert_eq!(unsafe { *buffer.wrapping_add(index) }, unsafe {
+            *update_sequence_array.wrapping_add(i as usize)
+        });
         index += increment;
     }
 
