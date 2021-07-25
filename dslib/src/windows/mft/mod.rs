@@ -9,10 +9,20 @@ use num_traits::FromPrimitive;
 use std::ffi::c_void;
 use std::ffi::OsString;
 use std::os::windows::prelude::OsStringExt;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::{mem, ptr};
 
 use winapi::um::fileapi::ReadFile;
 use winapi::um::minwinbase::{OVERLAPPED_u, OVERLAPPED};
+
+/// Debug value
+static DEBUG: AtomicUsize = AtomicUsize::new(1); // start at record 1 because the $MFT is record 0
+
+/// Debug function
+#[no_mangle]
+fn nop() {
+    let _ = ();
+}
 
 /// Special identifier for the root directory
 const ROOT: u32 = 5;
@@ -175,6 +185,7 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
 
     // ---------- Process the $MFT record
     let mft_record = unsafe { (mft.as_mut_ptr() as *mut MftRecord).as_ref().unwrap() };
+    fix_mft_data(&drive, mft.as_mut_ptr())?;
     // info!("Read $MFT record: {:#?}", mft_record);
 
     let mft_node = process_record(&drive, mft.as_mut_ptr(), &mft_record, &mut streams, true)?;
@@ -254,8 +265,8 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
     // Store the next node index so we can directly write to it when we encounter a new node
     let mut next_node_index: usize = 1;
 
-    let block_start: u64 = 0;
-    let block_end: u64 = 0;
+    let mut block_start: u64 = 0;
+    let mut block_end: u64 = 0;
     let mut real_vcn: u64 = 0;
     let mut vcn: u64 = 0;
 
@@ -276,11 +287,10 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
 
         if node_index >= block_end as u32 {
             // Read the next chunk
-
             {
                 let mut fragment_index = fragment_index.clone();
-                let block_start = node_index;
-                let mut block_end =
+                block_start = node_index as u64;
+                block_end =
                     block_start as u64 + BUF_SIZE as u64 / drive.bytes_per_mft_record as u64;
 
                 if block_end > data_stream.size * 8 {
@@ -339,7 +349,7 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
                     if ReadFile(
                         drive.handle,
                         mft.as_mut_ptr() as *mut c_void,
-                        (block_end as u32 - block_start) * drive.bytes_per_mft_record as u32,
+                        (block_end - block_start) as u32 * drive.bytes_per_mft_record as u32,
                         ptr::null_mut(),
                         &mut OVERLAPPED {
                             u: overlap,
@@ -357,6 +367,14 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
             total_bytes_read += (block_end - block_start) * drive.bytes_per_mft_record;
         }
 
+        // FixUpRawMftData
+        // fix_mft_data(
+        //     &drive,
+        //     mft.as_mut_ptr().wrapping_add(
+        //         (node_index as u64 - block_start) as usize * drive.bytes_per_mft_record as usize,
+        //     ),
+        // )?;
+
         /*
         let mft_record = unsafe { (mft.as_mut_ptr() as *mut MftRecord).as_ref().unwrap() };
         // info!("Read $MFT record: {:#?}", mft_record);
@@ -372,7 +390,19 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
                 .unwrap()
         };
 
-        println!("Flags: {} \\", { record.flags });
+        DEBUG.fetch_add(1, Ordering::SeqCst);
+        // trace!("Record #{}", id);
+        // // break: id == 595
+        // if id == 595 {
+        //     error!("about to segfault");
+        //     nop();
+        //     // debug!("{:#?}", mft[mft.len() - 1] as *const u8);
+        //     debug!("{:x?}", record as *const MftRecord as *const u8);
+        // }
+        // // object at 0x..080
+        // // but segmentation fault at 0x..096
+        // // failing after header
+        // debug!("Flags: {} \\", { record.flags });
 
         // trace!("a");
         let node = process_record(
@@ -392,7 +422,7 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
                 next_node_index += 1;
             }
             Err(err) => {
-                warn!("invalid node: {:?}", err);
+                // warn!("invalid node: {:?}", err);
             }
         }
     }
@@ -402,6 +432,7 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
     // todo end timer
 
     info!("Read {} bytes", total_bytes_read);
+    info!("Total entries: {}", DEBUG.fetch_add(1, Ordering::SeqCst));
 
     Ok(nodes)
 }
@@ -483,9 +514,10 @@ fn process_record(
         }
 
         // Attribute list must be processed last
-        if attribute.attribute_type == MftNodeAttributeType::AttributeList as u32 {
-            continue;
-        }
+        // if attribute.attribute_type == MftNodeAttributeType::AttributeList as u32 {
+        // trace!("AttributeList");
+        //     continue; // fixme
+        // }
 
         // Parse extended attribute info
         if attribute.non_resident == 0 {
@@ -516,30 +548,28 @@ fn process_record(
                         Some(attribute_filename.parent_directory.inode_number_low);
 
                     // Print file name
-                    // fixme temp
-                    {
+                    // // fixme temp
+                    // {
+                    //     print!("File name ");
+                    //     for c_index in 0..attribute_filename.name_length * 2
+                    //     // note multiplied by two because of utf-16 double byte characters
+                    //     // step two bytes at a time and parse as utf 16
+                    //     {
+                    //         print!("{}", attribute_filename.name[c_index as usize] as char);
+                    //     }
+                    //     println!(" with size {}KiB", { attribute_filename.data_size / 1024 });
+                    // }
+
+                    if attribute_filename.name_type == 1 || node.name_index == Some(0) {
+                        //fixme improve
                         print!("File name ");
-                        for c_index in 0..attribute_filename.name_length * 2
+                        for c_index in 0..attribute_filename.name_length as usize * 2
                         // note multiplied by two because of utf-16 double byte characters
                         // step two bytes at a time and parse as utf 16
                         {
                             print!("{}", attribute_filename.name[c_index as usize] as char);
                         }
-                        println!(" with size {}KiB", { attribute_filename.data_size / 1024 });
-                    }
-
-                    if attribute_filename.name_type == 1 || node.name_index == Some(0) {
-                        //fixme improve
-                        // print!("File name ");
-                        // for c_index in 0..attribute_filename.name_length * 2
-                        // // note multiplied by two because of utf-16 double byte characters
-                        // // step two bytes at a time and parse as utf 16
-                        // {
-                        //     print!("{}", attribute_filename.name[c_index as usize] as char);
-                        // }
-                        // println!(" with size {}MiB", {
-                        //     attribute_filename.data_size / 1024 / 1024
-                        // });
+                        println!(" with size {} bytes", { attribute_filename.data_size });
                     }
                 }
                 Some(MftNodeAttributeType::StandardInformation) => {
@@ -577,19 +607,19 @@ fn process_record(
             if attribute.name_length > 0 {
                 // fixme improve
                 // this is a directory
-                let name_pos = buffer
-                    .wrapping_add(record.attribute_offset as usize)
-                    .wrapping_add(offset as usize)
-                    .wrapping_add(attribute.name_offset as usize);
+                // let name_pos = buffer
+                //     .wrapping_add(record.attribute_offset as usize)
+                //     .wrapping_add(offset as usize)
+                //     .wrapping_add(attribute.name_offset as usize);
 
-                let name: &[u16] = unsafe {
-                    ::std::slice::from_raw_parts(
-                        name_pos as *const u16,
-                        attribute.name_length as usize,
-                    )
-                };
-                let name = OsString::from_wide(name);
-                println!("File name {:?}", name);
+                // let name: &[u16] = unsafe {
+                //     ::std::slice::from_raw_parts(
+                //         name_pos as *const u16,
+                //         attribute.name_length as usize,
+                //     )
+                // };
+                // let name = OsString::from_wide(name);
+                // println!("File name {:?}", name);
             }
 
             let ty = MftNodeAttributeType::from_u32(attribute.attribute_type)
@@ -681,4 +711,43 @@ fn process_record(
     }
 
     Ok(node)
+}
+
+fn fix_mft_data(drive: &DriveInfo, mft: *mut u8) -> Result<(), OsError> {
+    let header = unsafe { (mft as *mut MftRecordHeader).as_ref().unwrap() };
+
+    if header.ty != FILE {
+        return Ok(());
+    }
+
+    let buffer = mft as *mut u16; // wordBuffer
+    let update_sequence_array = mft.wrapping_add(header.usa_offset as usize) as *mut u16;
+    let increment = (drive.boot.bytes_per_sector as usize / mem::size_of::<u16>()) as u32;
+
+    let mut index = increment - 1;
+
+    for i in 1..header.usa_count {
+        // Check if we are in the buffer
+        if index as usize * mem::size_of::<u16>() >= drive.bytes_per_mft_record as usize {
+            return Err("usa data indicates data is missing, the mft may be corrupt".into());
+        }
+
+        // Ensure the last 2 bytes of the sector contain the usn
+        if unsafe { buffer.wrapping_add(index as usize).as_ref().unwrap() }
+            != unsafe { update_sequence_array.as_ref().unwrap() }
+        {
+            return Err("usa fixup word does not match usn, the mft may be corrupt".into());
+        }
+
+        // Replace the last 2 bytes (utf-16) in the sector with the usa value
+        unsafe {
+            *buffer.wrapping_add(index as usize) = *update_sequence_array
+                .wrapping_add(i as usize)
+                .as_ref()
+                .unwrap()
+        };
+        index += increment;
+    }
+
+    Ok(())
 }

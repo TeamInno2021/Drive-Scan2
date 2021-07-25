@@ -18,7 +18,7 @@ pub fn scan(dir: PathBuf) -> Result<File, Box<dyn ::std::error::Error>> {
     let drive = DriveInfo::parse(dir.clone())?;
 
     let nodes = mft::process(drive)?;
-    info!("{:#?}", nodes);
+    // info!("{:#?}", nodes);
 
     Ok(File::File { path: dir, size: 0 })
 }
