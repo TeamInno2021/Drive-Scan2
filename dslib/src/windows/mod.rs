@@ -9,10 +9,17 @@ mod winapi;
 use super::File;
 use drive::DriveInfo;
 use error::OsError;
+use std::mem::size_of;
 use std::path::{Path, PathBuf};
 
 pub fn verify(dir: &Path) -> Result<bool, Box<dyn ::std::error::Error>> {
-    Ok(filesystem::identify(dir)? == "NTFS")
+    // Make sure we aren't running on a 32-bit system (just in case)
+    // This means we can enforce that `usize` is a 64 bit integer
+    if size_of::<usize>() != size_of::<u64>() {
+        Ok(false)
+    } else {
+        Ok(filesystem::identify(dir)? == "NTFS")
+    }
 }
 
 pub fn scan(dir: PathBuf) -> Result<File, Box<dyn ::std::error::Error>> {

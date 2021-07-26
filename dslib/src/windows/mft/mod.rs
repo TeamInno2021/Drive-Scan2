@@ -429,7 +429,7 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
                 || cmp::max(next_node_index, index)
                     .checked_sub(10000)
                     .unwrap_or_else(|| cmp::min(next_node_index, index))
-                    >= cmp::min(next_node_index, index)
+                    > cmp::min(next_node_index, index)
                 || next_node_index > 200000
             {
                 trace!("{} | {}", next_node_index, index);
@@ -754,7 +754,7 @@ fn fix_mft_data(drive: &DriveInfo, mft: *mut u8) -> Result<(), OsError> {
         return Ok(());
     }
 
-    let buffer = mft as *mut u16; 
+    let buffer = mft as *mut u16;
     let update_sequence_array = mft.wrapping_add(record.header.usa_offset as usize) as *mut u16;
     let increment = drive.boot.bytes_per_sector as usize / mem::size_of::<u16>();
 
