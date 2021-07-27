@@ -25,7 +25,7 @@ function scan(dir) {
                 {
                     name: "a",
                     directory: false,
-                    soze: 32,
+                    size: 32,
                 },
             ],
         };
