@@ -1,12 +1,19 @@
 const dslib = require("./dslib.node");
 
-/** Dummy scan implementation while the real implementation is being developed */
-async function scan(dir) {}
+/** Dummy scan implementation while the real implementation is being developed,
+ * note that this method will wait an arbitrary number of seconds before resolving.
+ */
+async function scan(_dir) {
+    return new Promise((resolve) =>
+        // Wait somewhere between 2 to 8 seconds before resolving
+        setTimeout(resolve, Math.floor(Math.random()) * 8 - 2)
+    );
+}
 
 function query(dir) {
     return {
-        path: "",
-        size: 23,
+        path: "C:\\",
+        size: 163,
         files: [
             {
                 path: "a_large_video.mp4",
@@ -20,7 +27,7 @@ function query(dir) {
             },
             {
                 path: "",
-                size: 23,
+                size: 76,
                 directory: false,
             },
         ],
