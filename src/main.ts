@@ -1,15 +1,22 @@
-import { scan } from "dslib";
+import dslib from "dslib";
 import { app, BrowserWindow, ipcMain } from "electron";
 
+dslib.init();
+
 ipcMain.on("scan", (event, dir) => {
-    event.sender.send("scan-data", scan(dir));
+    dslib.scan(dir).then(() => event.sender.send("scan-complete"));
+});
+
+ipcMain.on("query", (event, dir) => {
+    event.returnValue = dslib.query(dir);
 });
 
 app.whenReady().then(() => {
     const win = new BrowserWindow({
         width: 1920,
         height: 1080,
-        webPreferences: {enableRemoteModule: true,
+        webPreferences: {
+            enableRemoteModule: true,
             nodeIntegration: true,
             contextIsolation: false,
         },

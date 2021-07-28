@@ -1,41 +1,43 @@
 const dslib = require("./dslib.node");
 
-/** Dummy scan implementation while the real implementation is being developed */
-function scan(dir) {
-    if (dir == "C:\\") {
-        return {
-            size: 4324324,
-            files: [
-                {
-                    name: "test",
-                    directory: true,
-                    size: 4324320,
-                },
-                {
-                    name: "sad",
-                    directory: false,
-                    size: 4,
-                },
-            ],
-        };
-    } else if (dir == "C:\\test") {
-        return {
-            size: 32,
-            files: [
-                {
-                    name: "a",
-                    directory: false,
-                    size: 32,
-                },
-            ],
-        };
-    }
-    // return JSON.parse(
-    //     '{"base":"C:\\\\","files":{"files":{"system32":{"files":{"wow, why is system32 empty thats weird":{"path":"C:\\\\system32\\\\wow, why is system32 empty thats weird","size":0}},"path":"C:\\\\system32","size":1},"dslib":{"files":{"src":{"files":{"audio.mp3":{"path":"C:\\\\dslib\\\\src\\\\audio.mp3","size":97612073},"video.mp4":{"path":"C:\\\\dslib\\\\src\\\\video.mp4","size":439598709}},"path":"C:\\\\dslib\\\\src","size":537210782},"package-lock.json":{"path":"C:\\\\dslib\\\\package-lock.json","size":48784},"build.rs":{"path":"C:\\\\dslib\\\\build.rs","size":42},"move.js":{"path":"C:\\\\dslib\\\\move.js","size":320}},"path":"C:\\\\dslib","size":537259928}},"path":"C:\\\\","size":537259929}}'
-    // );
+/** Dummy scan implementation while the real implementation is being developed,
+ * note that this method will wait an arbitrary number of seconds before resolving.
+ */
+async function scan(_dir) {
+    return new Promise((resolve) => {
+        // Wait somewhere between 2 to 8 seconds before resolving
+        setTimeout(resolve, Math.floor(Math.random() * 8 - 2) * 1000);
+    });
+}
+
+function query(dir) {
+    return {
+        path: "C:\\",
+        size: 163,
+        files: [
+            {
+                path: "a_large_video.mp4",
+                size: 23,
+                directory: false,
+            },
+            {
+                path: "",
+                size: 64,
+                directory: false,
+            },
+            {
+                path: "",
+                size: 76,
+                directory: false,
+            },
+        ],
+    };
 }
 
 module.exports = {
+    init: dslib.init,
     scan,
-    _scan: dslib.scan,
+    query,
+    // scan: dslib.scan,
+    // query: dslib.query,
 };
