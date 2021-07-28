@@ -6,7 +6,7 @@ mod filesystem;
 mod mft;
 mod winapi;
 
-use super::File;
+use super::Directory;
 use drive::DriveInfo;
 use error::OsError;
 use std::mem::size_of;
@@ -22,11 +22,14 @@ pub fn verify(dir: &Path) -> Result<bool, Box<dyn ::std::error::Error>> {
     }
 }
 
-pub fn scan(dir: PathBuf) -> Result<File, Box<dyn ::std::error::Error>> {
+pub fn scan(dir: PathBuf) -> Result<(), Box<dyn ::std::error::Error>> {
     let drive = DriveInfo::parse(dir.clone())?;
 
-    let nodes = mft::process(drive)?;
+    let _nodes = mft::process(drive)?;
     // info!("{:#?}", nodes);
+    Ok(())
+}
 
-    Ok(File::File { path: dir, size: 0 })
+pub fn query(_dir: PathBuf) -> Result<Option<Directory>, Box<dyn ::std::error::Error>> {
+    Ok(None)
 }

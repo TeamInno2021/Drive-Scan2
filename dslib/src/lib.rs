@@ -9,79 +9,125 @@ mod unix;
 use unix as interface;
 
 mod fallback;
+mod ffi;
 
 #[macro_use]
 extern crate napi_derive;
 #[macro_use]
 extern crate tracing;
 
-use napi::{CallContext, JsObject, JsString, JsUnknown, Result};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::path::PathBuf;
+use serde::Serialize;
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{self, AtomicUsize};
 
-#[derive(Debug, Serialize, Deserialize)]
-pub enum File {
-    File {
-        path: PathBuf,
-        size: usize,
-    },
-    Directory {
-        files: HashMap<String, File>,
-        path: PathBuf,
-        size: usize,
-    },
+/// Store the previous scanner used
+const SCANNER: AtomicUsize = AtomicUsize::new(0);
+
+#[repr(usize)]
+enum Scanner {
+    Unknown = 0,
+    Windows = 1,
+    Unix = 2,
+    Fallback = 3,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ScanResult {
-    base: PathBuf,
-    files: File,
+impl From<usize> for Scanner {
+    fn from(n: usize) -> Self {
+        match n {
+            1 => Scanner::Windows,
+            2 => Scanner::Unix,
+            3 => Scanner::Fallback,
+            _ => Scanner::Unknown,
+        }
+    }
 }
 
-pub fn _scan(dir: PathBuf) -> ::std::result::Result<ScanResult, Box<dyn ::std::error::Error>> {
+// ------------------------------------------------------------
+
+#[derive(Debug, Serialize)]
+pub struct File {
+    path: PathBuf,
+    size: usize,
+    directory: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct Directory {
+    path: PathBuf,
+    size: usize,
+    files: Vec<File>,
+}
+
+// ------------------------------------------------------------
+
+#[derive(Debug, Serialize)]
+pub struct FilePtr<'f> {
+    path: &'f Path,
+    size: usize,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DirectoryPtr<'f> {
+    path: &'f Path,
+    size: usize,
+    files: &'f [FilePtr<'f>],
+}
+
+// ------------------------------------------------------------
+
+/// Init the logging framework and other diagnostic tools (todo)
+pub fn __init() {
     tracing_subscriber::fmt::init();
+    info!("Started new instance");
+}
 
-    let res = match interface::verify(&dir) {
+pub fn scan(dir: PathBuf) -> ::std::result::Result<(), Box<dyn ::std::error::Error>> {
+    let scanner;
+
+    match interface::verify(&dir) {
         Ok(v) => {
             if v {
-                interface::scan(dir.clone())
+                interface::scan(dir.clone())?;
+                scanner = if cfg!(windows) {
+                    Scanner::Windows
+                } else if cfg!(unix) {
+                    Scanner::Unix
+                } else {
+                    Scanner::Unknown
+                }
             } else {
-                info!("unable to verify scan directory, using fallback");
-                fallback::scan(dir.clone())
+                fallback::scan(dir.clone())?;
+                scanner = Scanner::Fallback;
             }
         }
-        Err(e) => {
-            error!(
-                "unexpected error while attempting to validate scan directory ({}): {}",
-                std::env::consts::OS,
-                e
-            );
-            fallback::scan(dir.clone())
+        Err(_e) => {
+            fallback::scan(dir.clone())?;
+            scanner = Scanner::Fallback;
         }
     };
 
-    match res {
-        Ok(f) => Ok(ScanResult {
-            base: dir,
-            files: f,
-        }),
-        Err(e) => Err(e),
+    SCANNER.store(scanner as usize, atomic::Ordering::SeqCst);
+    Ok(())
+}
+
+pub fn query(
+    dir: PathBuf,
+) -> ::std::result::Result<Option<Directory>, Box<dyn ::std::error::Error>> {
+    match SCANNER.load(atomic::Ordering::SeqCst).into() {
+        Scanner::Unknown => {
+            Err("attempted to call query(_) before calling scan(_), this is likely a bug".into())
+        }
+        Scanner::Fallback => fallback::query(dir),
+        _ => interface::query(dir),
     }
 }
 
-#[js_function(1)]
-fn scan(ctx: CallContext) -> Result<JsUnknown> {
-    let dir: PathBuf = ctx.get::<JsString>(0)?.into_utf8()?.as_str()?.into();
-
-    match _scan(dir) {
-        Ok(f) => ctx.env.to_js_value(&f),
-        Err(e) => Err(napi::Error::new(napi::Status::Unknown, e.to_string())),
-    }
-}
+// ------------------------------------------------------------
 
 #[module_exports]
-fn init(mut exports: JsObject) -> Result<()> {
-    exports.create_named_method("scan", scan)?;
+fn init(mut exports: napi::JsObject) -> napi::Result<()> {
+    exports.create_named_method("init", ffi::init)?;
+    exports.create_named_method("scan", ffi::scan)?;
+    exports.create_named_method("query", ffi::query)?;
     Ok(())
 }

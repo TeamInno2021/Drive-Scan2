@@ -1,6 +1,8 @@
-use dslib::_scan;
+use dslib::{__init, query, scan};
 
 fn main() {
-    let res = _scan("C:\\".into()).unwrap();
-    // println!("{:#?}", res);
+    __init();
+
+    scan("C:\\".into()).unwrap();
+    println!("{:#?}", query("C:\\".into()).unwrap());
 }
