@@ -4,10 +4,10 @@ const dslib = require("./dslib.node");
  * note that this method will wait an arbitrary number of seconds before resolving.
  */
 async function scan(_dir) {
-    return new Promise((resolve) =>
+    return new Promise((resolve) => {
         // Wait somewhere between 2 to 8 seconds before resolving
-        setTimeout(resolve, Math.floor(Math.random()) * 8 - 2)
-    );
+        setTimeout(resolve, Math.floor(Math.random() * 8 - 2) * 1000);
+    });
 }
 
 function query(dir) {

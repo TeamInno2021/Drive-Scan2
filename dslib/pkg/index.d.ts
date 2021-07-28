@@ -12,4 +12,4 @@ export interface Directory {
 
 export function init(): void;
 export function scan(dir: string): Promise<void>;
-export function query(dir: string): Directory;
+export function query(dir: string): Directory | undefined;
