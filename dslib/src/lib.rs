@@ -21,9 +21,10 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{self, AtomicUsize};
 
 /// Store the previous scanner used
-const SCANNER: AtomicUsize = AtomicUsize::new(0);
+static SCANNER: AtomicUsize = AtomicUsize::new(0);
 
 #[repr(usize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Scanner {
     Unknown = 0,
     Windows = 1,
@@ -100,7 +101,8 @@ pub fn scan(dir: PathBuf) -> ::std::result::Result<(), Box<dyn ::std::error::Err
                 scanner = Scanner::Fallback;
             }
         }
-        Err(_e) => {
+        Err(err) => {
+            error!("{}, using fallback...", err);
             fallback::scan(dir.clone())?;
             scanner = Scanner::Fallback;
         }

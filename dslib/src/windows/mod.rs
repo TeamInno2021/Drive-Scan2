@@ -23,9 +23,10 @@ pub fn verify(dir: &Path) -> Result<bool, Box<dyn ::std::error::Error>> {
 }
 
 pub fn scan(dir: PathBuf) -> Result<(), Box<dyn ::std::error::Error>> {
-    let drive = DriveInfo::parse(dir.clone())?;
+    alt::scan(dir)?;
 
-    let _nodes = mft::process(drive)?;
+    // let drive = DriveInfo::parse(dir.clone())?;
+    // let _nodes = mft::process(drive)?;
     // info!("{:#?}", nodes);
     Ok(())
 }
