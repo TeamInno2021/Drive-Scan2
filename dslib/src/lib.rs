@@ -24,7 +24,7 @@ use std::sync::atomic::{self, AtomicUsize};
 const SCANNER: AtomicUsize = AtomicUsize::new(0);
 
 #[repr(usize)]
-pub enum Scanner {
+enum Scanner {
     Unknown = 0,
     Windows = 1,
     Unix = 2,
