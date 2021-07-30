@@ -24,3 +24,4 @@ napi-build = "1.1.0"
 [target.'cfg(unix)'.dependencies]
 # unix dependencies
 nix = "0.22.0"
+# blkid = "0.2.1"

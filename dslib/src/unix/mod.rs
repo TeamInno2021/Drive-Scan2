@@ -1,6 +1,9 @@
 use super::File;
+use ext4::blkid_from_dir;
 use std::path::{Path, PathBuf};
-use nix::sys::statfs::{statfs};
+use nix::sys::statfs::{statfs};     
+
+mod ext4;
 
 //Take a mountpoint and check if it is either ext or ntfs othewrise return false
 pub fn verify(dir: &Path) -> Result<bool, Box<dyn ::std::error::Error>> {

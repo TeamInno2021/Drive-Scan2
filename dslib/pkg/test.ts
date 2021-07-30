@@ -1,4 +1,5 @@
 import { scan } from "./index";
 
 //console.log(scan("C:\\"));
-scan("/home/benjamin");
+//scan("/home/benjamin");
+console.log()
