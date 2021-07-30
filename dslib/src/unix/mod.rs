@@ -1,4 +1,4 @@
-use super::File;
+use super::Directory;
 use ext4::blkid_from_dir;
 use std::path::{Path, PathBuf};
 use nix::sys::statfs::{statfs};     
@@ -20,6 +20,10 @@ pub fn verify(dir: &Path) -> Result<bool, Box<dyn ::std::error::Error>> {
     Ok(supportedtypes.contains(&dirinfo.filesystem_type().0))
 }
 
-pub fn scan(dir: PathBuf) -> Result<File, Box<dyn ::std::error::Error>> {
-    Ok(File::File { path: dir, size: 0 })
+pub fn scan(dir: PathBuf) -> Result<(), Box<dyn ::std::error::Error>> {
+    todo!();
+}
+
+pub fn query(dir: PathBuf) -> Result<Option<Directory>, Box<dyn ::std::error::Error>> {
+    todo!();
 }
