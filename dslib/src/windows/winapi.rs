@@ -73,7 +73,7 @@ where
 /// Convert a rust string into a win32 lpstr, appending a null byte
 pub fn winapi_str<S>(s: S) -> *const u16
 where
-    S: AsRef<str>,
+    S: AsRef<OsStr>,
 {
     OsStr::new(s.as_ref())
         .encode_wide()

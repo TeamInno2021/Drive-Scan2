@@ -17,6 +17,10 @@ pub fn verify(dir: &Path) -> Result<bool, Box<dyn ::std::error::Error>> {
     // This means we can enforce that `usize` is a 64 bit integer
     if size_of::<usize>() != size_of::<u64>() {
         Ok(false)
+    } else if !dir.exists() {
+        Err("target path does not exist".into())
+    } else if !dir.is_dir() {
+        Err("target path is not a valid directory".into())
     } else {
         Ok(filesystem::identify(dir)? == "NTFS")
     }
