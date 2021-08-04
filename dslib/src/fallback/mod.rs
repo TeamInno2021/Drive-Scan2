@@ -10,6 +10,10 @@ lazy_static! {
     static ref SCAN_CACHE: Mutex<Option<FileInternal>> = Mutex::new(None);
 }
 
+pub fn verify(_dir: &std::path::Path) -> Result<bool, Box<dyn ::std::error::Error>> {
+    Ok(true)
+}
+
 pub fn scan(dir: PathBuf) -> Result<(), Box<dyn ::std::error::Error>> {
     *SCAN_CACHE.lock().unwrap() = Some(FileInternal::new(dir)?);
     Ok(())
