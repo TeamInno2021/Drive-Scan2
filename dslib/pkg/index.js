@@ -1,4 +1,4 @@
-const dslib = require("./dslib.node");
+// const dslib = require("./dslib.node");
 
 /** Dummy scan implementation while the real implementation is being developed,
  * note that this method will wait an arbitrary number of seconds before resolving.
@@ -32,7 +32,7 @@ function query(_dir) {
 }
 
 module.exports = {
-    init: dslib.init,
+    // init: dslib.init,
     scan,
     query,
     // scan: dslib.scan,
