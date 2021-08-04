@@ -10,6 +10,7 @@ use unix as interface;
 
 mod fallback;
 mod ffi;
+mod re;
 
 #[macro_use]
 extern crate napi_derive;
