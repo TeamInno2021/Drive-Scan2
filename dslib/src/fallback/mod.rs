@@ -24,15 +24,22 @@ pub fn scan(dir: PathBuf) -> Result<(), Box<dyn ::std::error::Error>> {
 }
 
 pub fn query(dir: PathBuf) -> Result<Option<Directory>, Box<dyn ::std::error::Error>> {
-    let expecterr = "Inconcievable";
     let scandata = SCAN_CACHE.lock().unwrap();
-    let pathstart = scandata.as_ref().expect(expecterr).path.clone();
+    let pathstart = scandata.as_ref().unwrap().path.clone();
     //Strip the path to the scanned directory off the path, making the query path relative to the start of the scan not the root directory
-    let truncated_query_path = dir.strip_prefix(&scandata.as_ref().expect(expecterr).path.clone());
-    let mut currentfile: &FileInternal = scandata.as_ref().expect(expecterr);
+    let truncated_query_path = dir.strip_prefix(&scandata.as_ref().unwrap().path.clone());
+    let mut currentfile: &FileInternal = scandata.as_ref().unwrap();
     for segment in truncated_query_path {
         match &currentfile.children.as_ref() {
-            Some(cf) => currentfile = &cf[&segment.to_path_buf()],
+            Some(cf) => {
+                let seg_buf = &segment.to_path_buf();
+                if cf.contains_key(seg_buf) {
+                    currentfile = &cf[seg_buf];
+                }
+                else {
+                    return Err(Box::new(std::io::Error::new(ErrorKind::NotFound, format!("{:?} does not exist in scan records!", &currentfile.path))))
+                }
+            },
             None => return Err(Box::new(std::io::Error::new(ErrorKind::NotFound, format!("{:?} is not a directory! Cannot get its children!", &currentfile.path))))
         }
     }
