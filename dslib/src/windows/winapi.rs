@@ -1,14 +1,56 @@
-//! winapi helper methods
-
-use std::ffi::{OsStr, OsString};
-use std::os::windows::ffi::{OsStrExt, OsStringExt};
+use num_traits::sign::Unsigned;
+use std::ffi::OsString;
+use std::os::windows::ffi::OsStringExt;
 use std::ptr;
 
 use winapi::shared::ntdef::{LANG_NEUTRAL, MAKELANGID, SUBLANG_DEFAULT};
 use winapi::um::errhandlingapi::GetLastError;
-use winapi::um::winbase::{
-    FormatMessageW, FORMAT_MESSAGE_FROM_SYSTEM, FORMAT_MESSAGE_IGNORE_INSERTS,
-};
+use winapi::um::winbase::FormatMessageW;
+use winapi::um::winbase::{FORMAT_MESSAGE_FROM_SYSTEM, FORMAT_MESSAGE_IGNORE_INSERTS};
+
+pub struct WinapiResult<T>(Vec<T>);
+
+impl<T> From<WinapiResult<T>> for Vec<T> {
+    fn from(res: WinapiResult<T>) -> Self {
+        res.0
+    }
+}
+
+impl From<WinapiResult<u8>> for String {
+    fn from(res: WinapiResult<u8>) -> Self {
+        String::from_utf8_lossy(&res.0).to_string()
+    }
+}
+
+impl From<WinapiResult<u16>> for OsString {
+    fn from(res: WinapiResult<u16>) -> Self {
+        OsString::from_wide(&res.0)
+    }
+}
+
+pub unsafe fn winapi_call<Size, Ty, WinapiFn, IsOk, Status>(
+    size: Size,
+    call: WinapiFn,
+    ok: IsOk,
+) -> Result<WinapiResult<Ty>, OsString>
+where
+    Ty: Unsigned,
+    Size: Copy + Into<usize>,
+    WinapiFn: FnOnce(*mut Ty, Size) -> Status,
+    IsOk: FnOnce(Status) -> bool,
+{
+    let mut buffer: Vec<Ty> = Vec::with_capacity(size.into());
+
+    let status = call(buffer.as_mut_ptr(), size);
+    if ok(status) {
+        // Remove any data after the first null byte
+        buffer.truncate(buffer.iter().position(|c| c == &0).unwrap_or(buffer.len()));
+
+        Ok(WinapiResult(buffer))
+    } else {
+        Err(get_last_error())
+    }
+}
 
 /// Get the error message of the last winapi error using `GetLastError` and `FormatMessage`
 pub fn get_last_error() -> OsString {
@@ -37,47 +79,4 @@ pub fn get_last_error() -> OsString {
     } else {
         OsString::from_wide(&buffer)
     }
-}
-
-/// A helper to make calling winapi functions from rust easier
-///
-/// # Arguments
-/// - *size* - The buffer size, this is often passed directly to the function as well
-/// - *func* - The closure which contains the function being called, this is passed a pointer to an lpstr to use as an output buffer. It is also passed the value passed to the `size` argument of this function.
-/// - *success* - A closure which identifies the returned status code and checks whether the function succeeded, if it did not then `GetLastError` will be called and result in an `Err` message.
-pub fn winapi_call<Size, Func, Success, Return>(
-    size: Size,
-    func: Func,
-    success: Success,
-) -> Result<OsString, OsString>
-where
-    Size: Into<usize> + Copy,
-    Func: FnOnce(*mut u16, Size) -> Return,
-    Success: FnOnce(Return) -> bool,
-{
-    let mut buffer: Vec<u16> = Vec::with_capacity(size.into());
-    let code = func(buffer.as_mut_ptr(), size);
-
-    if !success(code) {
-        Err(get_last_error())
-    } else {
-        unsafe { buffer.set_len(size.into()) }
-
-        // Remove any characters after the first null byte
-        buffer.truncate(buffer.iter().position(|c| *c == 0).unwrap_or(buffer.len()));
-
-        Ok(OsString::from_wide(&buffer))
-    }
-}
-
-/// Convert a rust string into a win32 lpstr, appending a null byte
-pub fn winapi_str<S>(s: S) -> *const u16
-where
-    S: AsRef<OsStr>,
-{
-    OsStr::new(s.as_ref())
-        .encode_wide()
-        .chain(std::iter::once(0))
-        .collect::<Vec<u16>>()
-        .as_ptr()
 }
