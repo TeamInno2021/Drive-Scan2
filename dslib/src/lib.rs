@@ -26,6 +26,7 @@ extern crate tracing;
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{self, AtomicUsize};
+use std::time::Instant;
 
 /// Store the previous scanner used
 static SCANNER: AtomicUsize = AtomicUsize::new(0);
@@ -90,6 +91,9 @@ pub fn __init() {
 }
 
 pub fn scan(dir: PathBuf) -> ::std::result::Result<(), Box<dyn ::std::error::Error>> {
+    // Time the scanner
+    let start = Instant::now();
+
     let scanner;
 
     match interface::verify(&dir) {
@@ -114,6 +118,13 @@ pub fn scan(dir: PathBuf) -> ::std::result::Result<(), Box<dyn ::std::error::Err
             scanner = Scanner::Fallback;
         }
     };
+
+    let end = start.elapsed();
+    info!(
+        "Scan finished in {} seconds ({} milliseconds)",
+        end.as_secs(),
+        end.as_millis()
+    );
 
     SCANNER.store(scanner as usize, atomic::Ordering::SeqCst);
     Ok(())
