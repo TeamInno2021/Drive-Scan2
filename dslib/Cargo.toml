@@ -7,6 +7,10 @@ edition = "2018"
 [lib]
 crate-type = ["lib", "cdylib"]
 
+[features]
+# Force the scanner to use the fallback implementation
+use-fallback = []
+
 [[bin]]
 path = "src/main.rs"
 name = "dslib-dev"
