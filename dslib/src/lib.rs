@@ -1,15 +1,22 @@
+mod fallback;
+mod ffi;
+
+#[cfg(not(feature = "use-fallback"))]
 #[cfg(windows)]
 mod windows;
+#[cfg(not(feature = "use-fallback"))]
 #[cfg(windows)]
 use windows as interface;
 
+#[cfg(not(feature = "use-fallback"))]
 #[cfg(unix)]
 mod unix;
+#[cfg(not(feature = "use-fallback"))]
 #[cfg(unix)]
 use unix as interface;
 
-mod fallback;
-mod ffi;
+#[cfg(feature = "use-fallback")]
+use fallback as interface;
 
 #[macro_use]
 extern crate napi_derive;
