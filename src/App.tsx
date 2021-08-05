@@ -45,11 +45,11 @@ export class App extends Component<{}, { currentpage: string }> {
 
                     let children = [];
 
-                    for (let i  = 0; i < scandata.files.length; i++) {
+                    for (let i  = 0; i < scandata.children.length; i++) {
                         console.log(i);
                         children.push( {
                         id: `${i}`,
-                        name: Path.basename(scandata.files[i].path) + " - " + scandata.files[i].size,
+                        name: Path.basename(scandata.children[i].path) + " - " + scandata.children[i].size,
                     },);
                 }
 
