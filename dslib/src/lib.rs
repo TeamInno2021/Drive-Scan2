@@ -1,6 +1,5 @@
 mod fallback;
 mod ffi;
-mod re;
 
 #[cfg(not(feature = "use-fallback"))]
 #[cfg(windows)]
