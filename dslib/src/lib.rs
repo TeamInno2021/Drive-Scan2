@@ -24,14 +24,14 @@ extern crate napi_derive;
 extern crate tracing;
 
 use serde::Serialize;
-use std::path::{Path, PathBuf};
-use std::sync::atomic::{self, AtomicUsize};
+use std::path::PathBuf;
+use std::sync::atomic::{self, AtomicU8};
 use std::time::Instant;
 
 /// Store the previous scanner used
-static SCANNER: AtomicUsize = AtomicUsize::new(0);
+static SCANNER: AtomicU8 = AtomicU8::new(Scanner::Unix as u8);
 
-#[repr(usize)]
+#[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Scanner {
     Unknown = 0,
@@ -40,8 +40,8 @@ enum Scanner {
     Fallback = 3,
 }
 
-impl From<usize> for Scanner {
-    fn from(n: usize) -> Self {
+impl From<u8> for Scanner {
+    fn from(n: u8) -> Self {
         match n {
             1 => Scanner::Windows,
             2 => Scanner::Unix,
@@ -57,29 +57,7 @@ impl From<usize> for Scanner {
 pub struct File {
     path: PathBuf,
     size: usize,
-    directory: bool,
-}
-
-#[derive(Debug, Serialize)]
-pub struct Directory {
-    path: PathBuf,
-    size: usize,
-    files: Vec<File>,
-}
-
-// ------------------------------------------------------------
-
-#[derive(Debug, Serialize)]
-pub struct FilePtr<'f> {
-    path: &'f Path,
-    size: usize,
-}
-
-#[derive(Debug, Serialize)]
-pub struct DirectoryPtr<'f> {
-    path: &'f Path,
-    size: usize,
-    files: &'f [FilePtr<'f>],
+    children: Option<Vec<File>>,
 }
 
 // ------------------------------------------------------------
@@ -126,13 +104,11 @@ pub fn scan(dir: PathBuf) -> ::std::result::Result<(), Box<dyn ::std::error::Err
         end.as_millis()
     );
 
-    SCANNER.store(scanner as usize, atomic::Ordering::SeqCst);
+    SCANNER.store(scanner as u8, atomic::Ordering::SeqCst);
     Ok(())
 }
 
-pub fn query(
-    dir: PathBuf,
-) -> ::std::result::Result<Option<Directory>, Box<dyn ::std::error::Error>> {
+pub fn query(dir: PathBuf) -> ::std::result::Result<Option<File>, Box<dyn ::std::error::Error>> {
     match SCANNER.load(atomic::Ordering::SeqCst).into() {
         Scanner::Unknown => {
             Err("attempted to call query(_) before calling scan(_), this is likely a bug".into())
