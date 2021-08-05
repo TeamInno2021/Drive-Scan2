@@ -8,18 +8,18 @@ use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::winbase::FormatMessageW;
 use winapi::um::winbase::{FORMAT_MESSAGE_FROM_SYSTEM, FORMAT_MESSAGE_IGNORE_INSERTS};
 
-pub trait WinapiCall<T>
+pub trait WinapiExt<T>
 where
     Self: Sized,
 {
-    fn winapi_call<F, R, V>(size: usize, f: F, ok: V, truncate: bool) -> Result<Self, OsString>
+    fn call<F, R, V>(size: usize, f: F, ok: V, truncate: bool) -> Result<Self, OsString>
     where
         F: FnOnce(usize, *mut T) -> R,
         V: FnOnce(R) -> bool;
 }
 
-impl WinapiCall<u8> for Vec<u8> {
-    fn winapi_call<F, R, V>(size: usize, f: F, ok: V, truncate: bool) -> Result<Self, OsString>
+impl WinapiExt<u8> for Vec<u8> {
+    fn call<F, R, V>(size: usize, f: F, ok: V, truncate: bool) -> Result<Self, OsString>
     where
         F: FnOnce(usize, *mut u8) -> R,
         V: FnOnce(R) -> bool,
@@ -29,6 +29,8 @@ impl WinapiCall<u8> for Vec<u8> {
         let status = f(size, buffer.as_mut_ptr());
 
         if ok(status) {
+            unsafe { buffer.set_len(size.into()) }
+
             if truncate {
                 // Remove any data after the first null byte
                 buffer.truncate(buffer.iter().position(|c| c == &0).unwrap_or(buffer.len()));
@@ -41,19 +43,8 @@ impl WinapiCall<u8> for Vec<u8> {
     }
 }
 
-impl WinapiCall<u8> for String {
-    fn winapi_call<F, R, V>(size: usize, f: F, ok: V, truncate: bool) -> Result<Self, OsString>
-    where
-        F: FnOnce(usize, *mut u8) -> R,
-        V: FnOnce(R) -> bool,
-    {
-        let raw = Vec::<u8>::winapi_call(size, f, ok, truncate)?;
-        String::from_utf8(raw).map_err(|_| "attempted to convert non utf-8 buffer to utf-8".into())
-    }
-}
-
-impl WinapiCall<u16> for OsString {
-    fn winapi_call<F, R, V>(size: usize, f: F, ok: V, truncate: bool) -> Result<Self, OsString>
+impl WinapiExt<u16> for Vec<u16> {
+    fn call<F, R, V>(size: usize, f: F, ok: V, truncate: bool) -> Result<Self, OsString>
     where
         F: FnOnce(usize, *mut u16) -> R,
         V: FnOnce(R) -> bool,
@@ -63,15 +54,39 @@ impl WinapiCall<u16> for OsString {
         let status = f(size, buffer.as_mut_ptr());
 
         if ok(status) {
+            unsafe { buffer.set_len(size.into()) }
+
             if truncate {
                 // Remove any data after the first null byte
                 buffer.truncate(buffer.iter().position(|c| c == &0).unwrap_or(buffer.len()));
             }
 
-            Ok(OsString::from_wide(&buffer))
+            Ok(buffer)
         } else {
             Err(get_last_error())
         }
+    }
+}
+
+impl WinapiExt<u8> for String {
+    fn call<F, R, V>(size: usize, f: F, ok: V, truncate: bool) -> Result<Self, OsString>
+    where
+        F: FnOnce(usize, *mut u8) -> R,
+        V: FnOnce(R) -> bool,
+    {
+        let raw: Vec<u8> = WinapiExt::call(size, f, ok, truncate)?;
+        String::from_utf8(raw).map_err(|_| "attempted to convert non utf-8 buffer to utf-8".into())
+    }
+}
+
+impl WinapiExt<u16> for OsString {
+    fn call<F, R, V>(size: usize, f: F, ok: V, truncate: bool) -> Result<Self, OsString>
+    where
+        F: FnOnce(usize, *mut u16) -> R,
+        V: FnOnce(R) -> bool,
+    {
+        let raw: Vec<u16> = WinapiExt::call(size, f, ok, truncate)?;
+        Ok(OsString::from_wide(&raw))
     }
 }
 
@@ -104,14 +119,36 @@ pub fn get_last_error() -> OsString {
     }
 }
 
-/// Convert a rust string into a pointer correctly encoded utf-16 string (LPWSTR)
-pub fn to_utf16_ptr<S>(s: S) -> *const u16
+/// Convert a rust string into a LPCWSTR
+///
+/// # Arguments
+///
+/// * `s` - The string to convert
+///
+/// # Safety
+///
+/// The caller must ensure that the input string outlives the returned pointer.
+///
+/// # Examples
+///
+/// ```
+/// # use std::ffi::OsString;
+/// let s = String::from("Hello, World!");
+/// unsafe {
+///     let ptr: *const u16 = to_lpcwstr(&s);
+///     assert_eq!(*ptr, s.bytes().next().unwrap() as u16);
+/// }
+/// ```
+pub unsafe fn to_lpcwstr<S>(s: S) -> *const u16
 where
     S: AsRef<OsStr>,
 {
-    OsStr::new(s.as_ref())
+    let mut bytes = OsStr::new(s.as_ref())
         .encode_wide()
         .chain(::std::iter::once(0))
-        .collect::<Vec<u16>>()
-        .as_ptr()
+        .collect::<Vec<u16>>();
+
+    // Insert a null byte
+    bytes.push(0);
+    bytes.as_ptr()
 }
