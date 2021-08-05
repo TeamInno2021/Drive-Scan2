@@ -57,14 +57,7 @@ impl From<usize> for Scanner {
 pub struct File {
     path: PathBuf,
     size: usize,
-    directory: bool,
-}
-
-#[derive(Debug, Serialize)]
-pub struct Directory {
-    path: PathBuf,
-    size: usize,
-    files: Vec<File>,
+    children: Option<Vec<File>>,
 }
 
 // ------------------------------------------------------------
@@ -132,7 +125,7 @@ pub fn scan(dir: PathBuf) -> ::std::result::Result<(), Box<dyn ::std::error::Err
 
 pub fn query(
     dir: PathBuf,
-) -> ::std::result::Result<Option<Directory>, Box<dyn ::std::error::Error>> {
+) -> ::std::result::Result<Option<File>, Box<dyn ::std::error::Error>> {
     match SCANNER.load(atomic::Ordering::SeqCst).into() {
         Scanner::Unknown => {
             Err("attempted to call query(_) before calling scan(_), this is likely a bug".into())
