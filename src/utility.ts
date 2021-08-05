@@ -1,5 +1,5 @@
-import * as Electron from "electron";
-import * as Scan from "./scan";
+import * as Electron from 'electron'
+import * as Scan from "./scan"
 
 export function getDirectory() {
     let result = Electron.remote.dialog.showOpenDialogSync({properties: ["openDirectory"]})
