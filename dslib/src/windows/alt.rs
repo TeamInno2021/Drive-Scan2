@@ -1,4 +1,4 @@
-use super::{Directory, File};
+use super::File;
 use std::ffi::OsString;
 use std::os::windows::prelude::OsStringExt;
 use std::path::PathBuf;
@@ -10,7 +10,7 @@ use winapi::um::minwinbase::WIN32_FIND_DATAW;
 use winapi::um::winnt::FILE_ATTRIBUTE_DIRECTORY;
 
 lazy_static::lazy_static! {
-    pub static ref DATA: Option<Directory> = None;
+    pub static ref DATA: Option<File> = None;
 }
 
 /// An alternate scanner which functions on any drive and does not need elevated permissions.
