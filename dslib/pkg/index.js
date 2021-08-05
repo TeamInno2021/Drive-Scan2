@@ -1,7 +1,6 @@
 const dslib = require("./dslib.node");
 
-/** Dummy scan implementation while the real implementation is being developed,
- * note that this method will wait an arbitrary number of seconds before resolving.
+/** Dummy scan implementation while the real implementation is being developed
  */
 function scan(_dir) {
     return;
@@ -10,22 +9,27 @@ function scan(_dir) {
 function query(_dir) {
     return {
         path: "C:\\",
-        size: 163,
-        files: [
+        size: 23 + 64 + 76 + 64954689456,
+        children: [
             {
-                name: "a_large_video.mp4",
+                path: "C:\\a_large_video.mp4",
                 size: 23,
-                directory: false,
+                children: undefined,
             },
             {
-                name: "file.txt",
+                path: "C:\\file.txt",
                 size: 64,
-                directory: false,
+                children: undefined,
             },
             {
-                name: "moosic.mp5",
+                path: "C:\\moosic.mp5",
                 size: 76,
-                directory: false,
+                children: undefined,
+            },
+            {
+                path: "C:\\system32",
+                size: 64954689456,
+                children: [],
             },
         ],
     };
