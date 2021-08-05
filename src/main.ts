@@ -4,7 +4,9 @@ import { app, BrowserWindow, ipcMain } from "electron";
 dslib.init();
 
 ipcMain.on("scan", (event, dir) => {
-    dslib.scan(dir).then(() => event.sender.send("scan-complete"));
+    dslib.scan(dir);
+    event.returnValue = "";
+    // event.sender.send("scan-complete");
 });
 
 ipcMain.on("query", (event, dir) => {

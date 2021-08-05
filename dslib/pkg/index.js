@@ -6,23 +6,23 @@ function scan(_dir) {
     return;
 }
 
-function query(dir) {
+function query(_dir) {
     return {
         path: "C:\\",
         size: 163,
         files: [
             {
-                path: "a_large_video.mp4",
+                name: "a_large_video.mp4",
                 size: 23,
                 directory: false,
             },
             {
-                path: "",
+                name: "file.txt",
                 size: 64,
                 directory: false,
             },
             {
-                path: "",
+                name: "moosic.mp5",
                 size: 76,
                 directory: false,
             },
