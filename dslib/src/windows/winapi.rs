@@ -4,10 +4,12 @@ use std::os::windows::ffi::OsStringExt;
 use std::os::windows::prelude::OsStrExt;
 use std::ptr;
 
-use winapi::shared::ntdef::{LANG_NEUTRAL, MAKELANGID, SUBLANG_DEFAULT};
+use winapi::shared::ntdef::MAKELANGID;
+use winapi::shared::ntdef::{LANG_NEUTRAL, SUBLANG_DEFAULT};
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::fileapi::ReadFile;
 use winapi::um::handleapi::CloseHandle;
+use winapi::um::handleapi::INVALID_HANDLE_VALUE;
 use winapi::um::minwinbase::{OVERLAPPED_u, OVERLAPPED};
 use winapi::um::winbase::FormatMessageW;
 use winapi::um::winbase::{FORMAT_MESSAGE_FROM_SYSTEM, FORMAT_MESSAGE_IGNORE_INSERTS};
@@ -144,7 +146,7 @@ where
 
 /// Read bytes from a file handle
 pub unsafe fn read_file(
-    file: Handle,
+    file: &Handle,
     size: usize,
     offset: Option<u32>,
 ) -> Result<Vec<u8>, OsError> {
@@ -224,6 +226,7 @@ pub trait PtrCast {
 }
 
 impl PtrCast for *const u8 {
+    #[inline]
     unsafe fn cast<U>(self) -> &'static U {
         (self as *const U).as_ref().unwrap()
     }
@@ -238,18 +241,24 @@ pub trait PtrMutCast {
 }
 
 impl PtrMutCast for *mut u8 {
+    #[inline]
     unsafe fn cast<U>(self) -> &'static mut U {
         (self as *mut U).as_mut().unwrap()
     }
 }
 
 /// A (slightly safer) handle to something
-#[derive(Clone)]
+#[derive(Debug)]
 pub struct Handle(*mut c_void);
 
 impl Handle {
     fn to_raw(&self) -> *mut c_void {
         self.0
+    }
+
+    /// Returns `true` if the handle does not equal INVALID_HANDLE_VALUE
+    pub fn is_valid(&self) -> bool {
+        self.0 != INVALID_HANDLE_VALUE
     }
 }
 

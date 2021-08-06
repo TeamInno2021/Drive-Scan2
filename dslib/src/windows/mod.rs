@@ -1,9 +1,11 @@
 mod boot;
+mod drive;
 mod error;
 mod filesystem;
 mod winapi;
 
 use super::Directory;
+use drive::DriveInfo;
 use error::OsError;
 use std::mem::size_of;
 use std::path::{Path, PathBuf};
@@ -22,7 +24,10 @@ pub fn verify(dir: &Path) -> Result<bool, Box<dyn ::std::error::Error>> {
     }
 }
 
-pub fn scan(_dir: PathBuf) -> Result<(), Box<dyn ::std::error::Error>> {
+pub fn scan(dir: PathBuf) -> Result<(), Box<dyn ::std::error::Error>> {
+    let drive = DriveInfo::parse(dir.clone())?;
+    info!("{:#?}", drive);
+
     Ok(())
 }
 

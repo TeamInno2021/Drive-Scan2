@@ -1,6 +1,5 @@
 use super::winapi::{read_file, Handle, PtrCast};
 use super::OsError;
-use std::ffi::c_void;
 
 /// NTFS OEM ID
 const NTFS: u64 = 0x202020205346544E;
@@ -22,7 +21,7 @@ pub struct BootSector {
 }
 
 impl BootSector {
-    pub unsafe fn read_from(volume: Handle) -> Result<Self, OsError> {
+    pub unsafe fn read_from(volume: &Handle) -> Result<Self, OsError> {
         let data = read_file(volume, 512, None)?;
         let boot: BootSector = *PtrCast::cast(data.as_ptr());
 
