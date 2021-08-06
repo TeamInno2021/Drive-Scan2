@@ -28,7 +28,8 @@ pub fn verify(dir: &Path) -> Result<bool, Box<dyn ::std::error::Error>> {
 pub fn scan(dir: PathBuf) -> Result<(), Box<dyn ::std::error::Error>> {
     debug!("Beginning scan of {:?}", dir);
     let drive = DriveInfo::parse(dir.clone())?;
-    MftScanner::scan(drive)?;
+    let mut scanner = MftScanner::new(drive);
+    scanner.scan()?;
 
     Ok(())
 }
