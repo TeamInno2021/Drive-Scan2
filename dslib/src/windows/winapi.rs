@@ -188,7 +188,7 @@ pub unsafe fn read_file(
 pub fn get_last_error() -> OsString {
     let code = unsafe { GetLastError() };
 
-    const BUFFER_SIZE: u32 = 16384; // 16kb (just in case)
+    const BUFFER_SIZE: u32 = 16384; // 16kb
     let mut buffer: Vec<u16> = Vec::with_capacity(BUFFER_SIZE as usize);
 
     let size = unsafe {
