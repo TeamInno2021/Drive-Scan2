@@ -1,4 +1,3 @@
-mod boot;
 mod drive;
 mod error;
 mod filesystem;
@@ -25,8 +24,7 @@ pub fn verify(dir: &Path) -> Result<bool, Box<dyn ::std::error::Error>> {
 }
 
 pub fn scan(dir: PathBuf) -> Result<(), Box<dyn ::std::error::Error>> {
-    let drive = DriveInfo::parse(dir.clone())?;
-    info!("{:#?}", drive);
+    let _drive = DriveInfo::parse(dir.clone())?;
 
     Ok(())
 }

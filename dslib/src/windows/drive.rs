@@ -1,12 +1,30 @@
-use super::boot::BootSector;
 use super::OsError;
 use std::path::PathBuf;
 use std::ptr;
 
-use super::winapi::{get_last_error, Handle, WinapiExt};
+use super::winapi::{get_last_error, read_file, Handle, PtrCast, WinapiExt};
 use winapi::um::fileapi::{CreateFileA, OPEN_EXISTING};
 use winapi::um::winbase::GetVolumeNameForVolumeMountPointA;
 use winapi::um::winnt::{FILE_SHARE_READ, FILE_SHARE_WRITE, GENERIC_READ};
+
+/// NTFS OEM ID
+const NTFS: u64 = 0x202020205346544E;
+
+/// NTFS boot sector information
+#[repr(packed(1))]
+#[derive(Debug, Clone, Copy)]
+pub struct BootSector {
+    _alignment: [u8; 3],
+    signature: u64,
+    pub bytes_per_sector: u16,
+    pub sectors_per_cluster: u8,
+    _reserved: [u8; 26],
+    pub total_sectors: u64,
+    pub mft_cluster: u64,
+    pub mftmirr_cluster: u64,
+    pub clusters_per_mft_record: u32,
+    pub clusters_per_index_record: u32,
+}
 
 #[derive(Debug)]
 pub struct DriveInfo {
@@ -68,8 +86,20 @@ impl DriveInfo {
             return Err(get_last_error().into());
         }
 
-        // Get drive bootsector
-        let boot = unsafe { BootSector::read_from(&handle)? };
+        // Read drive bootsector
+        let boot = unsafe {
+            let data = read_file(&handle, 512, None)?;
+            let boot: BootSector = *PtrCast::cast(data.as_ptr());
+
+            // Ensure this is actually an NTFS drive by comparing the metadata to the expected signature
+            if boot.signature != NTFS {
+                Err(OsError::from(
+                    "attemped to scan non-ntfs drive as if it were ntfs, this is likely a bug",
+                ))
+            } else {
+                Ok(boot)
+            }
+        }?;
 
         // Calculate the number of bytes per mft record
         let bytes_per_mft_record = if boot.clusters_per_mft_record >= 128 {
