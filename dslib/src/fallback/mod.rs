@@ -6,12 +6,12 @@ use std::fs::{read_dir, symlink_metadata};
 use std::os::unix::fs::FileTypeExt;
 use std::io::{Error, ErrorKind};
 use lazy_static::*;
-use super::{Directory, File};
+use super::{File};
 
 
 //Lazy static to store cached scan info
 lazy_static! {
-    static ref SCAN_CACHE: Mutex<Option<FileInternal>> = Mutex::new(None);
+    static ref SCAN_CACHE: Mutex<Option<HashFile>> = Mutex::new(None);
 }
 
 pub fn verify(_dir: &std::path::Path) -> Result<bool, Box<dyn ::std::error::Error>> {
@@ -19,20 +19,21 @@ pub fn verify(_dir: &std::path::Path) -> Result<bool, Box<dyn ::std::error::Erro
 }
 
 pub fn scan(dir: PathBuf) -> Result<(), Box<dyn ::std::error::Error>> {
-    *SCAN_CACHE.lock().unwrap() = Some(FileInternal::new(dir)?);
+    info!("Beginning scan of {:?}",dir);
+    *SCAN_CACHE.lock().unwrap() = Some(HashFile::init(dir)?);
     Ok(())
 }
 
-pub fn query(dir: PathBuf) -> Result<Option<Directory>, Box<dyn ::std::error::Error>> {
+pub fn query(dir: PathBuf) -> Result<Option<File>, Box<dyn ::std::error::Error>> {
     let scandata = SCAN_CACHE.lock().unwrap();
-    let pathstart = scandata.as_ref().unwrap().path.clone();
+    let pathstart = &scandata.as_ref().unwrap().path.clone();
     //Strip the path to the scanned directory off the path, making the query path relative to the start of the scan not the root directory
-    let truncated_query_path = dir.strip_prefix(&scandata.as_ref().unwrap().path.clone());
-    let mut currentfile: &FileInternal = scandata.as_ref().unwrap();
+    let truncated_query_path = dir.strip_prefix(pathstart)?;
+    let mut currentfile: &HashFile = scandata.as_ref().unwrap();
     for segment in truncated_query_path {
-        match &currentfile.children.as_ref() {
+        match currentfile.children.as_ref() {
             Some(cf) => {
-                let seg_buf = &segment.to_path_buf();
+                let seg_buf = &PathBuf::from(segment);
                 if cf.contains_key(seg_buf) {
                     currentfile = &cf[seg_buf];
                 }
@@ -47,59 +48,64 @@ pub fn query(dir: PathBuf) -> Result<Option<Directory>, Box<dyn ::std::error::Er
     if currentfile.children.is_none() {
         return Err(Box::new(std::io::Error::new(ErrorKind::NotFound, format!("{:?} is not a directory! Cannot get its children!", &currentfile.path))))
     }
-    Ok(Some(currentfile.to_directory()?))  
+    Ok(Some(currentfile.to_file()))  
 }
 
 #[derive(Debug)]
-pub struct FileInternal {
+//Simmillar to dslib::File
+pub struct HashFile {
     pub path: PathBuf,
     pub size: usize,
-    pub children: Option<HashMap<PathBuf,FileInternal>>,
+    pub children: Option<HashMap<PathBuf,HashFile>>,
 }
 
-impl FileInternal {
+impl HashFile {
     ///Constructor to initialise a FileInternal and recursively scan through all its children
-    pub fn new(path: PathBuf) -> Result<FileInternal, std::io::Error> {
+    pub fn init(path: PathBuf) -> Result<HashFile, std::io::Error> {
         debug!("Scanning: {:?}:", path);
         //Get useful metadata for the given path
         let meta = symlink_metadata(&path)?;
-        //If this is a file we can just return the path and the size wrapped into a FileInternal
-        //Also do this if it is a simlink since we dont' want to follow those to avoid recording the same file twice
+        //Return the path and size with no children if the file is a:
+        //1. Normal File    (Has no children)
+        //2. Unix Symlink   (We don't want to record folders twice, and any children would technically be in a different place anyway)
+        //3. Unix Socket    (It can't have children)
         if meta.is_file()|| meta.file_type().is_symlink() {
             trace!("{:?}: {} bytes", path, meta.len());
-            return Ok(FileInternal { path: path, size: meta.len() as usize, children: None });
+            return Ok(HashFile { path: path, size: meta.len() as usize, children: None });
         }
         #[cfg(unix)]
         if meta.file_type().is_socket() {
             trace!("{:?}: {} bytes", path, meta.len());
-            return Ok(FileInternal { path: path, size: meta.len() as usize, children: None });
+            return Ok(HashFile { path: path, size: meta.len() as usize, children: None });
         }
 
         //Instantiate empty struct for this folder
-        let mut this_folder = FileInternal { path: path.clone(), size: 0, children: None };
-        let mut this_folder_children: HashMap<PathBuf, FileInternal> = HashMap::new();
+        let mut this_folder = HashFile { path: path.clone(), size: 0, children: None };
+        let mut this_folder_children: HashMap<PathBuf, HashFile> = HashMap::new();
         let dir_info = read_dir(path)?;
         for child in dir_info {
             let child_path = child?.path();
-            let child_data: FileInternal = FileInternal::new(child_path.clone())?;  //Run this function to get the information for the child
-            this_folder.size += child_data.size;                                    //Append the size of the child to this_folder
-            this_folder_children.insert(child_path, child_data);                    //Add this to the children
+            let child_data: HashFile = HashFile::init(child_path.clone())?;                                 //Run this function to get the information for the child
+            this_folder.size += child_data.size;                                                            //Append the size of the child to this_folder
+            this_folder_children.insert(PathBuf::from(child_path.file_name().unwrap()), child_data);   //Add this to the children
         }
         this_folder.children = Some(this_folder_children);
         Ok(this_folder)
     }
 
-    ///Converts this into a directory, preserves only immediate children!
-    pub fn to_directory(&self) -> Result<Directory, Box<dyn ::std::error::Error>> {
-        match &self.children {
-            Some(_) => {
-                let mut stripped_self: Directory = Directory { path: self.path.clone(), size: self.size, files: Vec::new() };
-                for child in self.children.as_ref().unwrap().values() {
-                    stripped_self.files.push(File { path: child.path.clone(), size: child.size, directory: child.children.is_some() });
-                }
-                Ok(stripped_self)
-            },
-            None => return Err(Box::new(std::io::Error::new(std::io::ErrorKind::NotFound, format!("{:?} is not a directory! Cannot get its children!", self.path)))),
+    ///Converts the object, and its children to a `dslib::File`. 
+    ///The `children` property of all children of the output file will be set to:
+    ///- `None`: The file is not a directory
+    ///- `Some(vec![File;0])`: The file is a directory
+    pub fn to_file(&self) -> File {       
+        let mut cloned_self: File = File { path: self.path.clone(), size: self.size, children: None };
+        if self.children.is_some() {
+            let mut trimmed_file_children = Vec::new();
+            for child in self.children.as_ref().unwrap().values() {
+                trimmed_file_children.push(File { path: child.path.clone(), size: child.size, children: child.children.as_ref().map(|_| Vec::new())});
+            }
+            cloned_self.children = Some(trimmed_file_children);
         }
-    }
+        cloned_self
+    }   
 }
