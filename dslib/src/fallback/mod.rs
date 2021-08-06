@@ -1,7 +1,7 @@
 use std::path::{PathBuf, Path};
 use std::sync::{Mutex};
 use std::collections::HashMap;
-use std::fs::{read_dir, symlink_metadata};
+use std::fs::{Metadata, read_dir, symlink_metadata};
 #[cfg(unix)]
 use std::os::unix::fs::FileTypeExt;
 use std::io::{Error, ErrorKind};
@@ -38,15 +38,15 @@ pub fn query(dir: PathBuf) -> Result<Option<File>, Box<dyn ::std::error::Error>>
                     currentfile = &cf[seg_buf];
                 }
                 else {
-                    return Err(Box::new(std::io::Error::new(ErrorKind::NotFound, format!("{:?} does not exist in scan records!", &currentfile.path))))
+                    return Err(Box::new(Error::new(ErrorKind::NotFound, format!("{:?} does not exist in scan records!", &currentfile.path))))
                 }
             },
-            None => return Err(Box::new(std::io::Error::new(ErrorKind::NotFound, format!("{:?} is not a directory! Cannot get its children!", &currentfile.path))))
+            None => return Err(Box::new(Error::new(ErrorKind::NotFound, format!("{:?} is not a directory! Cannot get its children!", &currentfile.path))))
         }
     }
     //If we ended up with a file something is wrong
     if currentfile.children.is_none() {
-        return Err(Box::new(std::io::Error::new(ErrorKind::NotFound, format!("{:?} is not a directory! Cannot get its children!", &currentfile.path))))
+        return Err(Box::new(Error::new(ErrorKind::NotFound, format!("{:?} is not a directory! Cannot get its children!", &currentfile.path))))
     }
     Ok(Some(currentfile.to_file()))  
 }
@@ -61,20 +61,25 @@ pub struct HashFile {
 
 impl HashFile {
     ///Constructor to initialise a FileInternal and recursively scan through all its children
-    pub fn init(path: PathBuf) -> Result<HashFile, std::io::Error> {
-        debug!("Scanning: {:?}:", path);
+    pub fn init(path: PathBuf) -> Result<HashFile, Error> {
+        trace!("Scanning: {:?}:", path);
         //Get useful metadata for the given path
-        let meta = symlink_metadata(&path)?;
-        //Return the path and size with no children if the file is a:
-        //1. Normal File    (Has no children)
-        //2. Unix Symlink   (We don't want to record folders twice, and any children would technically be in a different place anyway)
-        //3. Unix Socket    (It can't have children)
+        let meta_res = symlink_metadata(&path);
+        //Assume not a directory and a file size of zero if we don't have perms to metadata
+        if meta_res.is_err() && meta_res.as_ref().err().unwrap().kind() == ErrorKind::PermissionDenied {
+            debug!("Unable to query {:?} for metadata: Permission Denied!\nassuming path is not a directory and has a size of 0", path);
+            return Ok(HashFile { path: path, size: 0, children: None })
+        }
+        let meta: Metadata = meta_res?;
+        
+        //Return the path and size with no children if the file is not a normal directory
         if meta.is_file()|| meta.file_type().is_symlink() {
             trace!("{:?}: {} bytes", path, meta.len());
             return Ok(HashFile { path: path, size: meta.len() as usize, children: None });
         }
         #[cfg(unix)]
-        if meta.file_type().is_socket() {
+        let filetype = meta.file_type();
+        if filetype.is_socket() || filetype.is_fifo() || filetype.is_block_device() || filetype.is_char_device() {
             trace!("{:?}: {} bytes", path, meta.len());
             return Ok(HashFile { path: path, size: meta.len() as usize, children: None });
         }
@@ -90,6 +95,7 @@ impl HashFile {
             this_folder_children.insert(PathBuf::from(child_path.file_name().unwrap()), child_data);   //Add this to the children
         }
         this_folder.children = Some(this_folder_children);
+        trace!("{:?}: {} bytes", this_folder.path, this_folder.size);
         Ok(this_folder)
     }
 
