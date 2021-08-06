@@ -7,6 +7,7 @@ use std::ptr;
 use winapi::shared::ntdef::{LANG_NEUTRAL, MAKELANGID, SUBLANG_DEFAULT};
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::fileapi::ReadFile;
+use winapi::um::handleapi::CloseHandle;
 use winapi::um::minwinbase::{OVERLAPPED_u, OVERLAPPED};
 use winapi::um::winbase::FormatMessageW;
 use winapi::um::winbase::{FORMAT_MESSAGE_FROM_SYSTEM, FORMAT_MESSAGE_IGNORE_INSERTS};
@@ -143,7 +144,7 @@ where
 
 /// Read bytes from a file handle
 pub unsafe fn read_file(
-    file: *mut c_void,
+    file: Handle,
     size: usize,
     offset: Option<u32>,
 ) -> Result<Vec<u8>, OsError> {
@@ -153,7 +154,7 @@ pub unsafe fn read_file(
         size,
         |size, data| unsafe {
             ReadFile(
-                file,
+                file.to_raw(),
                 data as *mut c_void,
                 size as u32,
                 &mut read,
@@ -239,5 +240,27 @@ pub trait PtrMutCast {
 impl PtrMutCast for *mut u8 {
     unsafe fn cast<U>(self) -> &'static mut U {
         (self as *mut U).as_mut().unwrap()
+    }
+}
+
+/// A (slightly safer) handle to something
+#[derive(Clone)]
+pub struct Handle(*mut c_void);
+
+impl Handle {
+    fn to_raw(&self) -> *mut c_void {
+        self.0
+    }
+}
+
+impl From<*mut c_void> for Handle {
+    fn from(ptr: *mut c_void) -> Self {
+        Handle(ptr)
+    }
+}
+
+impl Drop for Handle {
+    fn drop(&mut self) {
+        unsafe { CloseHandle(self.0) };
     }
 }

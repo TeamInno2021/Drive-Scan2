@@ -1,4 +1,4 @@
-use super::winapi::{read_file, PtrCast};
+use super::winapi::{read_file, Handle, PtrCast};
 use super::OsError;
 use std::ffi::c_void;
 
@@ -6,9 +6,8 @@ use std::ffi::c_void;
 const NTFS: u64 = 0x202020205346544E;
 
 /// NTFS boot sector information
-/// See <http://ntfs.com/ntfs-partition-boot-sector.htm> for extra information
-#[derive(Debug, Clone, Copy)]
 #[repr(packed(1))]
+#[derive(Debug, Clone, Copy)]
 pub struct BootSector {
     _alignment: [u8; 3],
     signature: u64,
@@ -23,15 +22,15 @@ pub struct BootSector {
 }
 
 impl BootSector {
-    pub unsafe fn read_from(volume_handle: *mut c_void) -> Result<Self, OsError> {
-        let data = read_file(volume_handle, 512, None)?;
-        let volume: BootSector = *PtrCast::cast(data.as_ptr());
+    pub unsafe fn read_from(volume: Handle) -> Result<Self, OsError> {
+        let data = read_file(volume, 512, None)?;
+        let boot: BootSector = *PtrCast::cast(data.as_ptr());
 
         // Ensure this is actually an NTFS drive by comparing the metadata to the expected signature
-        if volume.signature != NTFS {
+        if boot.signature != NTFS {
             Err("attemped to scan non-ntfs drive as if it were ntfs".into())
         } else {
-            Ok(volume)
+            Ok(boot)
         }
     }
 }
