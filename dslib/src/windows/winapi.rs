@@ -1,11 +1,13 @@
 use super::OsError;
-use std::ffi::{OsStr, OsString};
+use std::ffi::{c_void, OsStr, OsString};
 use std::os::windows::ffi::OsStringExt;
 use std::os::windows::prelude::OsStrExt;
 use std::ptr;
 
 use winapi::shared::ntdef::{LANG_NEUTRAL, MAKELANGID, SUBLANG_DEFAULT};
 use winapi::um::errhandlingapi::GetLastError;
+use winapi::um::fileapi::ReadFile;
+use winapi::um::minwinbase::{OVERLAPPED_u, OVERLAPPED};
 use winapi::um::winbase::FormatMessageW;
 use winapi::um::winbase::{FORMAT_MESSAGE_FROM_SYSTEM, FORMAT_MESSAGE_IGNORE_INSERTS};
 
@@ -105,35 +107,6 @@ impl WinapiExt<u16> for OsString {
     }
 }
 
-/// Get the error message of the last winapi error using `GetLastError` and `FormatMessage`
-pub fn get_last_error() -> OsString {
-    let code = unsafe { GetLastError() };
-
-    const BUFFER_SIZE: u32 = 16384; // 16kb (just in case)
-    let mut buffer: Vec<u16> = Vec::with_capacity(BUFFER_SIZE as usize);
-
-    let size = unsafe {
-        FormatMessageW(
-            FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-            ptr::null(),
-            code,
-            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT).into(),
-            buffer.as_mut_ptr(),
-            BUFFER_SIZE,
-            ptr::null_mut(),
-        )
-    };
-
-    unsafe { buffer.set_len(size as usize) }
-
-    // If FormatMessage failed then inject our own error message
-    if size == 0 {
-        OsString::from("`FormatMessage` unexpectedly failed to fetch error status, this is likely a bug or a problem with your system")
-    } else {
-        OsString::from_wide(&buffer)
-    }
-}
-
 /// Convert a rust string into an LPCWSTR
 ///
 /// # Arguments
@@ -166,4 +139,105 @@ where
     // Insert a null byte
     bytes.push(0);
     bytes.as_ptr()
+}
+
+/// Read bytes from a file handle
+pub unsafe fn read_file(
+    file: *mut c_void,
+    size: usize,
+    offset: Option<u32>,
+) -> Result<Vec<u8>, OsError> {
+    let mut read = 0;
+
+    let mut data: Vec<u8> = WinapiExt::call(
+        size,
+        |size, data| unsafe {
+            ReadFile(
+                file,
+                data as *mut c_void,
+                size as u32,
+                &mut read,
+                match offset {
+                    Some(offset) => {
+                        let mut u = OVERLAPPED_u::default();
+                        u.s_mut().Offset = offset;
+                        &mut OVERLAPPED {
+                            u,
+                            hEvent: ptr::null_mut(),
+                            Internal: 0,
+                            InternalHigh: 0,
+                        }
+                    }
+                    None => ptr::null_mut(),
+                },
+            )
+        },
+        |status| status != 0,
+        false,
+    )?;
+
+    data.set_len(read as usize);
+
+    Ok(data)
+}
+
+/// Get the error message of the last winapi error using `GetLastError` and `FormatMessage`
+pub fn get_last_error() -> OsString {
+    let code = unsafe { GetLastError() };
+
+    const BUFFER_SIZE: u32 = 16384; // 16kb (just in case)
+    let mut buffer: Vec<u16> = Vec::with_capacity(BUFFER_SIZE as usize);
+
+    let size = unsafe {
+        FormatMessageW(
+            FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+            ptr::null(),
+            code,
+            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT).into(),
+            buffer.as_mut_ptr(),
+            BUFFER_SIZE,
+            ptr::null_mut(),
+        )
+    };
+
+    unsafe { buffer.set_len(size as usize) }
+
+    // If FormatMessage failed then inject our own error message
+    if size == 0 {
+        OsString::from("`FormatMessage` unexpectedly failed to fetch error status, this is likely a bug or a problem with your system")
+    } else {
+        OsString::from_wide(&buffer)
+    }
+}
+
+/// Cast a pointer into another type
+///
+/// This method is **extraordinarily** unsafe and several conditions must be met before calling it.
+/// - The pointer must be properly aligned
+/// - The pointer must point to an initialized instance of the target
+///
+/// Note that **is is up to the caller** to ensure that the data the pointer is targeting outlives the returned object.
+pub trait PtrCast {
+    /// Perform the cast
+    unsafe fn cast<U>(self) -> &'static U;
+}
+
+impl PtrCast for *const u8 {
+    unsafe fn cast<U>(self) -> &'static U {
+        (self as *const U).as_ref().unwrap()
+    }
+}
+
+/// Cast a mutable pointer into another type
+///
+/// This is the mutable version of the [PtrCast] method.
+pub trait PtrMutCast {
+    /// Perform the cast
+    unsafe fn cast<U>(self) -> &'static mut U;
+}
+
+impl PtrMutCast for *mut u8 {
+    unsafe fn cast<U>(self) -> &'static mut U {
+        (self as *mut U).as_mut().unwrap()
+    }
 }

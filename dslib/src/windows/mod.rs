@@ -1,3 +1,4 @@
+mod boot;
 mod error;
 mod filesystem;
 mod winapi;
