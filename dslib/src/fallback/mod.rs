@@ -77,12 +77,13 @@ impl HashFile {
             trace!("{:?}: {} bytes", path, meta.len());
             return Ok(HashFile { path: path, size: meta.len() as usize, children: None });
         }
-        #[cfg(unix)]
-        let filetype = meta.file_type();
-        if filetype.is_socket() || filetype.is_fifo() || filetype.is_block_device() || filetype.is_char_device() {
-            trace!("{:?}: {} bytes", path, meta.len());
-            return Ok(HashFile { path: path, size: meta.len() as usize, children: None });
-        }
+        #[cfg(unix)] {
+            let filetype = meta.file_type();
+            if filetype.is_socket() || filetype.is_fifo() || filetype.is_block_device() || filetype.is_char_device() {
+                trace!("{:?}: {} bytes", path, meta.len());
+                return Ok(HashFile { path: path, size: meta.len() as usize, children: None });
+            }
+        }   
 
         //Instantiate empty struct for this folder
         let mut this_folder = HashFile { path: path.clone(), size: 0, children: None };
