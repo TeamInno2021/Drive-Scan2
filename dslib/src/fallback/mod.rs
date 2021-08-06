@@ -70,6 +70,12 @@ impl HashFile {
             debug!("Unable to query {:?} for metadata: Permission Denied!\nassuming path is not a directory and has a size of 0", path);
             return Ok(HashFile { path: path, size: 0, children: None })
         }
+        #[cfg(windows)] {
+            if meta_res.is_err() && meta_res.as_ref().err().unwrap().raw_os_error() == Some(0x20) {
+                debug!("Unable to query {:?} for metadata: Permission Denied!\nassuming path is not a directory and has a size of 0", path);
+                return Ok(HashFile { path: path, size: 0, children: None })
+            }
+        }   
         let meta: Metadata = meta_res?;
         
         //Return the path and size with no children if the file is not a normal directory
