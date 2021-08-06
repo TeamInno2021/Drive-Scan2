@@ -41,8 +41,17 @@ impl DriveInfo {
 
         debug!("Targeting volume: {:?}", volume);
 
+        // Remove the trailing backslashes from the volume name
+        // Because for some reason CreateFile does not accept them
+        let mut volume = volume.trim_end_matches('\\').to_string();
+
+        // Append a null byte to terminate the string
+        volume.push('\0');
+
         // Get drive handle
         let handle: Handle = unsafe {
+            // Note that we aren't actually creating a file,
+            // just opening a handle to the device
             CreateFileA(
                 volume.as_ptr() as *const i8,
                 GENERIC_READ,
@@ -63,9 +72,13 @@ impl DriveInfo {
         let boot = unsafe { BootSector::read_from(&handle)? };
 
         // Calculate the number of bytes per mft record
-        let bytes_per_mft_record = boot.clusters_per_mft_record as u64
-            * boot.bytes_per_sector as u64
-            * boot.sectors_per_cluster as u64;
+        let bytes_per_mft_record = if boot.clusters_per_mft_record >= 128 {
+            1 << (256 - boot.clusters_per_mft_record as u8 as u16) as u8
+        } else {
+            (boot.clusters_per_mft_record
+                * boot.bytes_per_sector as u32
+                * boot.sectors_per_cluster as u32) as u64
+        };
 
         Ok(DriveInfo {
             path,
