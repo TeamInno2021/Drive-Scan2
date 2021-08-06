@@ -7,9 +7,6 @@ edition = "2018"
 [lib]
 crate-type = ["lib", "cdylib"]
 
-# [profile.release]
-# lto = true
-
 [features]
 # Force the scanner to use the fallback implementation
 use-fallback = []
