@@ -2,12 +2,14 @@ mod drive;
 mod error;
 mod filesystem;
 mod mft;
+mod re;
 mod winapi;
 
 use super::Directory;
 use drive::DriveInfo;
 use error::OsError;
-use mft::MftScanner;
+// use re as mft;
+// use mft::MftScanner;
 use std::mem::size_of;
 use std::path::{Path, PathBuf};
 
@@ -28,8 +30,11 @@ pub fn verify(dir: &Path) -> Result<bool, Box<dyn ::std::error::Error>> {
 pub fn scan(dir: PathBuf) -> Result<(), Box<dyn ::std::error::Error>> {
     debug!("Beginning scan of {:?}", dir);
     let drive = DriveInfo::parse(dir.clone())?;
-    let mut scanner = unsafe { MftScanner::init(drive)? };
-    unsafe { scanner.scan()? };
+
+    // let mut scanner = unsafe { MftScanner::init(drive)? };
+    // unsafe { scanner.scan()? };
+
+    let _nodes = mft::process(drive)?;
 
     Ok(())
 }
