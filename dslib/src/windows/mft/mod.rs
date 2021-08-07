@@ -160,8 +160,8 @@ pub unsafe fn process_run_offset(
 /// Process the mft of a drive
 pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
     // Allocate a buffer to store the mft table in
-    // let mut mft: Vec<u8> = Vec::with_capacity(BUF_SIZE);
-    let mut mft: Vec<u8> = vec![0; BUF_SIZE]; // rest in peace ram
+    let mut mft: Vec<u8> = Vec::with_capacity(BUF_SIZE);
+    // let mut mft: Vec<u8> = vec![0; BUF_SIZE]; // rest in peace ram
 
     // ----- Read the $MFT record, this is always the first entry in the MFT table and acts as a record of the files in the volume
     let dmft = unsafe {
@@ -177,6 +177,9 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
     };
 
     // Insert the $MFT record at the start of the buffer
+    for i in 0..dmft.len() {
+        mft.insert(i, 0);
+    }
     mft.splice(..dmft.len(), dmft);
 
     let mut streams: Vec<Stream> = Vec::new();
@@ -229,6 +232,10 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
             let start = real_vcn as usize
                 * drive.boot.bytes_per_sector as usize
                 * drive.boot.sectors_per_cluster as usize;
+
+            for i in 0..data.len() {
+                mft.insert(start + i, 0);
+            }
             bitmap_data.splice(start..start + data.len(), data);
 
             real_vcn += fragment.next_vcn - vcn;
