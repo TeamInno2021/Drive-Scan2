@@ -2,14 +2,20 @@ import React, { Component } from "react";
 import * as Utility from "./utility";
 import * as Scan from "./scan";
 import * as Electron from "electron";
+import dslib, { File, query } from "dslib";
+
+//Splitter Layout
 import SplitterLayout from 'react-splitter-layout';
 import 'react-splitter-layout/lib/index.css';
 
-export class App extends Component<{}, { currentpage: string }> { 
+export class App extends Component<{}, { currentpage: string, currentFolder: dslib.File, }> { 
     
     constructor(props:{}) {
         super(props)
-        this.state = {currentpage:"scanpage"}
+        this.state = {
+            currentpage: "scanpage",
+            currentFolder: { path: "", size: 0, children: [] }
+        }
     }
 
     getDirectory() {
