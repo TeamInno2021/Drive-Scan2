@@ -11,6 +11,7 @@ import 'react-splitter-layout/lib/index.css';
 //Pie Chart
 import Chart from 'bk-react-charts'
 import 'bk-react-charts/dist/index.css'
+import { TableRow } from "@material-ui/core";
 
 export class App extends Component<{}, { currentPage: string, currentFolder: dslib.File, }> { 
     
@@ -30,7 +31,6 @@ export class App extends Component<{}, { currentPage: string, currentFolder: dsl
         console.log(Scan.query(result[0]));
         this.setState({currentPage:"mainviewpage"})
     }
-    
 
     render(): JSX.Element {
         if(this.state.currentPage == "scanpage") {
@@ -59,9 +59,9 @@ export class App extends Component<{}, { currentPage: string, currentFolder: dsl
                                     height='400px'
                                     width='400px'
                                     outerBorderWidth='1px'
-
-                                    xName='item'
-                                    yName='spending'
+                                    dataSource={this.state.currentFolder.children}
+                                    xName={path.filename('path')}
+                                    yName='size'
                                     pieChartExplode={true}
                                     pieChartExplodeOffset='10%'
                                     pieChartExplodeIndex={1}
