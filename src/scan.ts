@@ -1,4 +1,4 @@
-import { Directory } from "dslib";
+import { File } from "dslib";
 import { ipcRenderer } from "electron";
 
 export function scan(dir: string): void {
@@ -12,6 +12,6 @@ export function scan(dir: string): void {
     // });
 }
 
-export function query(dir: string): Directory | undefined {
+export function query(dir: string): File | undefined {
     return ipcRenderer.sendSync("query", dir);
 }
