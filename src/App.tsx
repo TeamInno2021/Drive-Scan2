@@ -8,12 +8,12 @@ import dslib, { File, query } from "dslib";
 import SplitterLayout from 'react-splitter-layout';
 import 'react-splitter-layout/lib/index.css';
 
-export class App extends Component<{}, { currentpage: string, currentFolder: dslib.File, }> { 
+export class App extends Component<{}, { currentPage: string, currentFolder: dslib.File, }> { 
     
     constructor(props:{}) {
         super(props)
         this.state = {
-            currentpage: "scanpage",
+            currentPage: "scanpage",
             currentFolder: { path: "", size: 0, children: [] }
         }
     }
@@ -24,18 +24,18 @@ export class App extends Component<{}, { currentpage: string, currentFolder: dsl
         });
         Scan.scan(result[0]);
         console.log(Scan.query(result[0]));
-        this.setState({currentpage:"mainviewpage"})
+        this.setState({currentPage:"mainviewpage"})
     }
     
 
     render(): JSX.Element {
-        if(this.state.currentpage == "scanpage") {
+        if(this.state.currentPage == "scanpage") {
             return <h3>
             Select
             <input id="button" type="button" value="Directory" onClick={this.getDirectory.bind(this)}/>
             </h3>;
         }
-        else if(this.state.currentpage == "mainviewpage") {
+        else if(this.state.currentPage == "mainviewpage") {
             return <h1>
                 <SplitterLayout vertical={false}>
                     {/* TreeView */}
