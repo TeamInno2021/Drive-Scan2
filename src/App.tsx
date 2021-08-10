@@ -2,8 +2,14 @@ import React, { Component } from "react";
 import * as Utility from "./utility";
 import * as Scan from "./scan";
 import * as Electron from "electron";
+
+//Splitter Layout
 import SplitterLayout from 'react-splitter-layout';
 import 'react-splitter-layout/lib/index.css';
+
+//Pie Chart
+import Chart from 'bk-react-charts'
+import 'bk-react-charts/dist/index.css'
 
 export class App extends Component<{}, { currentpage: string }> { 
     
@@ -45,7 +51,21 @@ export class App extends Component<{}, { currentpage: string }> {
                             </div>
                             {/* PieView */}
                             <div>
-                                Ben Put the Pie Here
+                                <Chart
+                                    height='400px'
+                                    width='400px'
+                                    outerBorderWidth='1px'
+
+                                    xName='item'
+                                    yName='spending'
+                                    pieChartExplode={true}
+                                    pieChartExplodeOffset='10%'
+                                    pieChartExplodeIndex={1}
+                                    pieChartRadius={150}
+                                    title='Expense details'
+                                    tooltip={{ enable: true }}
+                                    type='PieChart'
+                                />  
                             </div>
                         </SplitterLayout>
                     </div>
