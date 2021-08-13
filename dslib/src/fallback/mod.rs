@@ -77,6 +77,7 @@ pub struct HashFile {
 
 impl HashFile {
     ///Constructor to initialise a HashFile
+    #[rustfmt::skip]
     pub fn new(path: PathBuf, directory: bool) -> HashFile {
         match directory {
             true  => HashFile { path, size: 0, children: None },
@@ -123,7 +124,7 @@ impl HashFile {
             {
                 trace!("{:?}: {} bytes", path, meta.len());
                 return Ok(HashFile {
-                    path: path,
+                    path,
                     size: meta.len() as usize,
                     children: None,
                 });
@@ -131,11 +132,7 @@ impl HashFile {
         }
 
         //Instantiate empty struct for this folder
-        let mut this_folder = HashFile {
-            path: path.clone(),
-            size: 0,
-            children: None,
-        };
+        let mut this_folder = HashFile::new(path.clone(), true);
         let mut this_folder_children: HashMap<PathBuf, HashFile> = HashMap::new();
         let dir_info_res = read_dir(path.clone());
         if dir_info_res.is_err()
