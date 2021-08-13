@@ -14,6 +14,7 @@ lazy_static! {
     static ref SCAN_CACHE: Mutex<Option<HashFile>> = Mutex::new(None);
 }
 
+#[cfg(feature = "use-fallback")]
 pub fn verify(_dir: &std::path::Path) -> Result<bool, Box<dyn ::std::error::Error>> {
     Ok(true)
 }
@@ -76,7 +77,15 @@ pub struct HashFile {
 }
 
 impl HashFile {
-    ///Constructor to initialise a FileInternal and recursively scan through all its children
+    ///Constructor to initialise a HashFile
+    pub fn new(path: PathBuf, directory: bool) -> HashFile {
+        match directory {
+            true  => HashFile { path, size: 0, children: None },
+            false => HashFile { path, size: 0, children: Some(HashMap::new()) }
+        }
+    }
+
+    ///Constructor to initialise a HashFile and recursively scan through all its children
     pub fn init(path: PathBuf) -> Result<HashFile, Error> {
         trace!("Scanning: {:?}:", path);
         //Get useful metadata for the given path
@@ -86,28 +95,16 @@ impl HashFile {
             && meta_res.as_ref().err().unwrap().kind() == ErrorKind::PermissionDenied
         {
             debug!("Unable to query {:?} for metadata: Permission Denied!\nassuming path is not a directory and has a size of 0", path);
-            return Ok(HashFile {
-                path: path,
-                size: 0,
-                children: None,
-            });
+            return Ok(HashFile::new(path, false));
         } else if meta_res.is_err() && meta_res.as_ref().err().unwrap().kind() == ErrorKind::Other {
             warn!("Unable to query {:?} for metadata: Unknown Error: \"{}\"!\nAssuming path is not a directory and has a size of 0", path, meta_res.as_ref().err().unwrap().to_string());
-            return Ok(HashFile {
-                path: path,
-                size: 0,
-                children: None,
-            });
+            return Ok(HashFile::new(path, false));
         }
         #[cfg(windows)]
         {
             if meta_res.is_err() && meta_res.as_ref().err().unwrap().raw_os_error() == Some(0x20) {
                 debug!("Unable to query {:?} for metadata: Permission Denied!\nassuming path is not a directory and has a size of 0", path);
-                return Ok(HashFile {
-                    path: path,
-                    size: 0,
-                    children: None,
-                });
+                return Ok(HashFile::new(path, false));
             }
         }
         let meta: Metadata = meta_res?;
@@ -115,11 +112,7 @@ impl HashFile {
         //Return the path and size with no children if the file is not a normal directory
         if meta.is_file() || meta.file_type().is_symlink() {
             trace!("{:?}: {} bytes", path, meta.len());
-            return Ok(HashFile {
-                path: path,
-                size: meta.len() as usize,
-                children: None,
-            });
+            return Ok(HashFile::new(path, false));
         }
         #[cfg(unix)]
         {
@@ -150,20 +143,12 @@ impl HashFile {
             && dir_info_res.as_ref().err().unwrap().kind() == ErrorKind::PermissionDenied
         {
             debug!("Unable to get the children of {:?}: Permission Denied!\nAssuming path has no children and a size of 0", path);
-            return Ok(HashFile {
-                path: path,
-                size: 0,
-                children: Some(HashMap::new()),
-            });
+            return Ok(HashFile::new(path, true));
         } else if dir_info_res.is_err()
             && dir_info_res.as_ref().err().unwrap().kind() == ErrorKind::Other
         {
             warn!("Unable to get the children of {:?}: Unknown Error: \"{}\"\nAssuming path has no children and a size of 0", path, dir_info_res.as_ref().err().unwrap().to_string());
-            return Ok(HashFile {
-                path: path,
-                size: 0,
-                children: Some(HashMap::new()),
-            });
+            return Ok(HashFile::new(path, true));
         }
         let dir_info = dir_info_res?;
         for child in dir_info {
