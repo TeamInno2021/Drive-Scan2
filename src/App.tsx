@@ -9,9 +9,8 @@ import SplitterLayout from 'react-splitter-layout';
 import 'react-splitter-layout/lib/index.css';
 
 //Pie Chart
-import Chart from 'bk-react-charts'
-import 'bk-react-charts/dist/index.css'
-import { TableRow } from "@material-ui/core";
+import { Chart } from 'react-charts'
+import { Pie } from "./Pie";
 
 export class App extends Component<{}, { currentPage: string, currentFolder: dslib.File, }> { 
     
@@ -19,17 +18,32 @@ export class App extends Component<{}, { currentPage: string, currentFolder: dsl
         super(props)
         this.state = {
             currentPage: "scanpage",
-            currentFolder: { path: "", size: 0, children: [] }
+            currentFolder: {
+                path: "",
+                size: 0,
+                children: []
+            }
         }
     }
 
-    getDirectory() {
+    async getDirectory() {
         let result = Electron.remote.dialog.showOpenDialogSync({
             properties: ["openDirectory"],
         });
         Scan.scan(result[0]);
-        console.log(Scan.query(result[0]));
-        this.setState({currentPage:"mainviewpage"})
+        console.log({currentPage:"mainviewpage", currentFolder:Scan.query(result[0])});
+        await this.setState({currentPage:"mainviewpage", currentFolder:Scan.query(result[0])});
+        console.log(this.state.currentFolder);
+    }
+
+    //Method to allow the pie chart and folder view to update the currentfolder
+    async setCurrentFolder(newFolder: dslib.File) {
+        this.setState({ currentFolder: newFolder });
+    }
+
+    //Method to allow the pie chart and folder view to get the currentfolder
+    getCurrentFolder(): dslib.File {
+        return this.state.currentFolder;
     }
 
     render(): JSX.Element {
@@ -39,7 +53,7 @@ export class App extends Component<{}, { currentPage: string, currentFolder: dsl
             <input id="button" type="button" value="Directory" onClick={this.getDirectory.bind(this)}/>
             </h3>;
         }
-        else if(this.state.currentPage == "mainviewpage") {
+        else if(this.state.currentFolder != undefined && this.state.currentPage == "mainviewpage") {
             return <h1>
                 <SplitterLayout vertical={false}>
                     {/* TreeView */}
@@ -55,21 +69,7 @@ export class App extends Component<{}, { currentPage: string, currentFolder: dsl
                             </div>
                             {/* PieView */}
                             <div>
-                                <Chart
-                                    height='400px'
-                                    width='400px'
-                                    outerBorderWidth='1px'
-                                    dataSource={this.state.currentFolder.children}
-                                    xName={path.filename('path')}
-                                    yName='size'
-                                    pieChartExplode={true}
-                                    pieChartExplodeOffset='10%'
-                                    pieChartExplodeIndex={1}
-                                    pieChartRadius={150}
-                                    title='Expense details'
-                                    tooltip={{ enable: true }}
-                                    type='PieChart'
-                                />  
+                                <Pie getCurrentFolder={this.getCurrentFolder} setCurrentFolder={this.setCurrentFolder}/>
                             </div>
                         </SplitterLayout>
                     </div>
