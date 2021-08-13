@@ -2,11 +2,10 @@ use super::File;
 use lazy_static::*;
 use std::collections::HashMap;
 use std::fs::{read_dir, symlink_metadata, Metadata};
-use std::hash::Hash;
 use std::io::{Error, ErrorKind};
 #[cfg(unix)]
 use std::os::unix::fs::FileTypeExt;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Mutex;
 
 //Lazy static to store cached scan info
