@@ -7,10 +7,10 @@ switch (process.platform) {
         break;
     }
 
-    // case "linux": {
-    //     dslib = require("./dslib-linux.node");
-    //     break;
-    // }
+    case "linux": {
+        dslib = require("./dslib-linux.node");
+        break;
+    }
 
     default: {
         throw new Error("unsupported platform");
