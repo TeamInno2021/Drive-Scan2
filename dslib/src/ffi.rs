@@ -9,7 +9,7 @@ pub fn init(ctx: CallContext) -> Result<JsUndefined> {
 
 #[js_function(1)]
 pub fn scan(ctx: CallContext) -> Result<JsUnknown> {
-    let dir: PathBuf = ctx.get::<JsString>(0)?.into_utf16()?.as_str()?.into();
+    let dir: PathBuf = ctx.get::<JsString>(0)?.into_utf8()?.as_str()?.into();
 
     match super::scan(dir) {
         Ok(f) => ctx.env.to_js_value(&f),
@@ -19,7 +19,7 @@ pub fn scan(ctx: CallContext) -> Result<JsUnknown> {
 
 #[js_function(1)]
 pub fn query(ctx: CallContext) -> Result<JsUnknown> {
-    let dir: PathBuf = ctx.get::<JsString>(0)?.into_utf16()?.as_str()?.into();
+    let dir: PathBuf = ctx.get::<JsString>(0)?.into_utf8()?.as_str()?.into();
 
     match super::query(dir) {
         Ok(dir) => ctx.env.to_js_value(&dir),
