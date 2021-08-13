@@ -78,10 +78,10 @@ pub struct HashFile {
 impl HashFile {
     ///Constructor to initialise a HashFile
     #[rustfmt::skip]
-    pub fn new(path: PathBuf, directory: bool) -> HashFile {
+    pub fn new(path: PathBuf, size: usize, directory: bool) -> HashFile {
         match directory {
-            true  => HashFile { path, size: 0, children: None },
-            false => HashFile { path, size: 0, children: Some(HashMap::new()) }
+            true  => HashFile { path, size, children: None },
+            false => HashFile { path, size, children: Some(HashMap::new()) }
         }
     }
 
@@ -95,16 +95,16 @@ impl HashFile {
             && meta_res.as_ref().err().unwrap().kind() == ErrorKind::PermissionDenied
         {
             debug!("Unable to query {:?} for metadata: Permission Denied!\nassuming path is not a directory and has a size of 0", path);
-            return Ok(HashFile::new(path, false));
+            return Ok(HashFile::new(path, 0, false));
         } else if meta_res.is_err() && meta_res.as_ref().err().unwrap().kind() == ErrorKind::Other {
             warn!("Unable to query {:?} for metadata: Unknown Error: \"{}\"!\nAssuming path is not a directory and has a size of 0", path, meta_res.as_ref().err().unwrap().to_string());
-            return Ok(HashFile::new(path, false));
+            return Ok(HashFile::new(path, 0, false));
         }
         #[cfg(windows)]
         {
             if meta_res.is_err() && meta_res.as_ref().err().unwrap().raw_os_error() == Some(0x20) {
                 debug!("Unable to query {:?} for metadata: Permission Denied!\nassuming path is not a directory and has a size of 0", path);
-                return Ok(HashFile::new(path, false));
+                return Ok(HashFile::new(path, 0, false));
             }
         }
         let meta: Metadata = meta_res?;
@@ -112,7 +112,7 @@ impl HashFile {
         //Return the path and size with no children if the file is not a normal directory
         if meta.is_file() || meta.file_type().is_symlink() {
             trace!("{:?}: {} bytes", path, meta.len());
-            return Ok(HashFile::new(path, false));
+            return Ok(HashFile::new(path, meta.len() as usize, false));
         }
         #[cfg(unix)]
         {
@@ -123,36 +123,33 @@ impl HashFile {
                 || filetype.is_char_device()
             {
                 trace!("{:?}: {} bytes", path, meta.len());
-                return Ok(HashFile {
-                    path,
-                    size: meta.len() as usize,
-                    children: None,
-                });
+                return Ok(HashFile::new(path, meta.len() as usize, false));
             }
         }
 
         //Instantiate empty struct for this folder
-        let mut this_folder = HashFile::new(path.clone(), true);
+        let mut this_folder = HashFile::new(path.clone(), 0, true);
         let mut this_folder_children: HashMap<PathBuf, HashFile> = HashMap::new();
         let dir_info_res = read_dir(path.clone());
         if dir_info_res.is_err()
             && dir_info_res.as_ref().err().unwrap().kind() == ErrorKind::PermissionDenied
         {
             debug!("Unable to get the children of {:?}: Permission Denied!\nAssuming path has no children and a size of 0", path);
-            return Ok(HashFile::new(path, true));
-        } else if dir_info_res.is_err()
-            && dir_info_res.as_ref().err().unwrap().kind() == ErrorKind::Other
-        {
+            return Ok(HashFile::new(path, 0, true));
+        } else if dir_info_res.is_err() {
             warn!("Unable to get the children of {:?}: Unknown Error: \"{}\"\nAssuming path has no children and a size of 0", path, dir_info_res.as_ref().err().unwrap().to_string());
-            return Ok(HashFile::new(path, true));
+            return Ok(HashFile::new(path, 0, true));
         }
         let dir_info = dir_info_res?;
         for child in dir_info {
             let child_path = child?.path();
-            let child_data: HashFile = HashFile::init(child_path.clone())?; //Run this function to get the information for the child
-            this_folder.size += child_data.size; //Append the size of the child to this_folder
-            this_folder_children.insert(PathBuf::from(child_path.file_name().unwrap()), child_data);
-            //Add this to the children
+            // System permissions can sometimes make us get a child which doesn't actually exist
+            if child_path.exists() {
+                let child_data: HashFile = HashFile::init(child_path.clone())?; //Run this function to get the information for the child
+                this_folder.size += child_data.size; //Append the size of the child to this_folder
+                this_folder_children
+                    .insert(PathBuf::from(child_path.file_name().unwrap()), child_data);
+            }
         }
         this_folder.children = Some(this_folder_children);
         trace!("{:?}: {} bytes", this_folder.path, this_folder.size);
