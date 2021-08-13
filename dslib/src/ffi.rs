@@ -8,11 +8,11 @@ pub fn init(ctx: CallContext) -> Result<JsUndefined> {
 }
 
 #[js_function(1)]
-pub fn scan(ctx: CallContext) -> Result<JsUnknown> {
+pub fn scan(ctx: CallContext) -> Result<JsUndefined> {
     let dir: PathBuf = ctx.get::<JsString>(0)?.into_utf8()?.as_str()?.into();
 
     match super::scan(dir) {
-        Ok(f) => ctx.env.to_js_value(&f),
+        Ok(_) => ctx.env.get_undefined(),
         Err(e) => Err(Error::new(Status::Unknown, e.to_string())),
     }
 }
