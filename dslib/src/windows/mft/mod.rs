@@ -1,23 +1,16 @@
 mod raw;
 
 use super::drive::DriveInfo;
-use super::winapi::get_last_error;
+use super::winapi::read_file;
 use super::OsError;
 use raw::*;
 
-use lazy_static::lazy_static;
 use num_traits::FromPrimitive;
 
-use std::collections::HashMap;
-use std::ffi::{c_void, OsString};
-use std::os::windows::prelude::OsStringExt;
+use std::ffi::OsString;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Mutex;
-use std::time::{Duration, Instant};
-use std::{cmp, mem, ptr};
-
-use winapi::um::fileapi::ReadFile;
-use winapi::um::minwinbase::{OVERLAPPED_u, OVERLAPPED};
+use std::time::Instant;
+use std::{cmp, mem};
 
 /// Debug value
 static DEBUG: AtomicUsize = AtomicUsize::new(1); // start at record 1 because the $MFT is record 0
@@ -166,38 +159,28 @@ pub unsafe fn process_run_offset(
 
 /// Process the mft of a drive
 pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
-    // ----- Read the $MFT record, this is always the first entry in the MFT table and acts as a record of the files in the volume
+    // Allocate a buffer to store the mft table in
     let mut mft: Vec<u8> = Vec::with_capacity(BUF_SIZE);
+    // let mut mft: Vec<u8> = vec![0; BUF_SIZE]; // rest in peace ram
 
-    unsafe {
-        let mut size = 0;
-        let mut overlap = OVERLAPPED_u::default();
-        overlap.s_mut().Offset = drive.boot.mft_cluster as u32
-            * drive.boot.bytes_per_sector as u32
-            * drive.boot.sectors_per_cluster as u32;
+    // ----- Read the $MFT record, this is always the first entry in the MFT table and acts as a record of the files in the volume
+    let dmft = unsafe {
+        read_file(
+            &drive.handle,
+            drive.bytes_per_mft_record as usize,
+            Some(
+                drive.boot.mft_cluster as u32
+                    * drive.boot.bytes_per_sector as u32
+                    * drive.boot.sectors_per_cluster as u32,
+            ),
+        )?
+    };
 
-        if ReadFile(
-            drive.handle,
-            mft.as_mut_ptr() as *mut c_void,
-            drive.bytes_per_mft_record as u32,
-            &mut size,
-            &mut OVERLAPPED {
-                u: overlap,
-                hEvent: ptr::null_mut(),
-                Internal: 0,
-                InternalHigh: 0,
-            },
-        ) == 0
-        {
-            return Err(get_last_error().into());
-        }
-
-        if drive.bytes_per_mft_record != size as u64 {
-            return Err("could not read complete volume data".into());
-        }
-
-        mft.set_len(size as usize);
+    // Insert the $MFT record at the start of the buffer
+    for i in 0..dmft.len() {
+        mft.insert(i, 0);
     }
+    mft.splice(..dmft.len(), dmft);
 
     let mut streams: Vec<Stream> = Vec::new();
 
@@ -232,35 +215,29 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
 
     for fragment in stream.fragments() {
         if fragment.lcn != VIRTUALFRAGMENT {
-            unsafe {
-                let mut overlap = OVERLAPPED_u::default();
-                overlap.s_mut().Offset = (fragment.lcn
-                    * drive.boot.bytes_per_sector as u64
-                    * drive.boot.sectors_per_cluster as u64)
-                    as u32;
+            let data = unsafe {
+                read_file(
+                    &drive.handle,
+                    (fragment.next_vcn - vcn) as usize
+                        * drive.boot.bytes_per_sector as usize
+                        * drive.boot.sectors_per_cluster as usize,
+                    Some(
+                        (fragment.lcn
+                            * drive.boot.bytes_per_sector as u64
+                            * drive.boot.sectors_per_cluster as u64) as u32,
+                    ),
+                )?
+            };
 
-                if ReadFile(
-                    drive.handle,
-                    bitmap_data.as_mut_ptr().wrapping_add(
-                        real_vcn as usize
-                            * drive.boot.bytes_per_sector as usize
-                            * drive.boot.sectors_per_cluster as usize,
-                    ) as *mut c_void,
-                    (fragment.next_vcn - vcn) as u32
-                        * drive.boot.bytes_per_sector as u32
-                        * drive.boot.sectors_per_cluster as u32,
-                    ptr::null_mut(),
-                    &mut OVERLAPPED {
-                        u: overlap,
-                        hEvent: ptr::null_mut(),
-                        Internal: 0,
-                        InternalHigh: 0,
-                    },
-                ) == 0
-                {
-                    return Err(get_last_error().into());
-                }
+            let start = real_vcn as usize
+                * drive.boot.bytes_per_sector as usize
+                * drive.boot.sectors_per_cluster as usize;
+
+            for i in 0..data.len() {
+                mft.insert(start + i, 0);
             }
+            bitmap_data.splice(start..start + data.len(), data);
+
             real_vcn += fragment.next_vcn - vcn;
         }
 
@@ -355,32 +332,21 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
                     block_end = u1;
                 }
 
-                let position: u64 = (data_stream.fragments()[fragment_index as usize].lcn
-                    - real_vcn)
-                    * drive.boot.bytes_per_sector as u64
-                    * drive.boot.sectors_per_cluster as u64
-                    + block_start as u64 * drive.bytes_per_mft_record as u64;
+                let position = (data_stream.fragments()[fragment_index as usize].lcn as u32
+                    - real_vcn as u32)
+                    * drive.boot.bytes_per_sector as u32
+                    * drive.boot.sectors_per_cluster as u32
+                    + block_start as u32 * drive.bytes_per_mft_record as u32;
 
-                unsafe {
-                    let mut overlap = OVERLAPPED_u::default();
-                    overlap.s_mut().Offset = position as u32;
+                let data = unsafe {
+                    read_file(
+                        &drive.handle,
+                        (block_end - block_start) as usize * drive.bytes_per_mft_record as usize,
+                        Some(position),
+                    )?
+                };
 
-                    if ReadFile(
-                        drive.handle,
-                        mft.as_mut_ptr() as *mut c_void,
-                        (block_end - block_start) as u32 * drive.bytes_per_mft_record as u32,
-                        ptr::null_mut(),
-                        &mut OVERLAPPED {
-                            u: overlap,
-                            hEvent: ptr::null_mut(),
-                            Internal: 0,
-                            InternalHigh: 0,
-                        },
-                    ) == 0
-                    {
-                        return Err(get_last_error().into());
-                    }
-                }
+                mft.splice(..data.len(), data);
             }
 
             total_bytes_read += (block_end - block_start) * drive.bytes_per_mft_record;

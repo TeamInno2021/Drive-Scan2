@@ -1,27 +1,37 @@
-use super::boot::BootSector;
 use super::OsError;
-
-use std::ffi::c_void;
 use std::path::PathBuf;
 use std::ptr;
 
-use super::winapi::{get_last_error, winapi_call, winapi_str};
-use winapi::um::fileapi::{CreateFileA, GetVolumeNameForVolumeMountPointW, OPEN_EXISTING};
-use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
+use super::winapi::{get_last_error, read_file, Handle, PtrCast, WinapiExt};
+use winapi::um::fileapi::{CreateFileA, OPEN_EXISTING};
+use winapi::um::winbase::GetVolumeNameForVolumeMountPointA;
 use winapi::um::winnt::{FILE_SHARE_READ, FILE_SHARE_WRITE, GENERIC_READ};
+
+/// NTFS OEM ID
+const NTFS: u64 = 0x202020205346544E;
+
+/// NTFS boot sector information
+#[repr(packed(1))]
+#[derive(Debug, Clone, Copy)]
+pub struct BootSector {
+    _alignment: [u8; 3],
+    signature: u64,
+    pub bytes_per_sector: u16,
+    pub sectors_per_cluster: u8,
+    _reserved: [u8; 26],
+    pub total_sectors: u64,
+    pub mft_cluster: u64,
+    pub mftmirr_cluster: u64,
+    pub clusters_per_mft_record: u32,
+    pub clusters_per_index_record: u32,
+}
 
 #[derive(Debug)]
 pub struct DriveInfo {
     /// The directory to scan
     pub path: PathBuf,
-    /// The root path of the drive
-    pub root: String,
-    /// The drive letter
-    pub letter: char,
-    /// The name of the drive volume
-    pub volume: String,
     /// A handle to the target volume
-    pub handle: *mut c_void,
+    pub handle: Handle,
     /// Low level bootsector information
     pub boot: BootSector,
     // Extra cluster information for parsing mft records
@@ -30,40 +40,36 @@ pub struct DriveInfo {
 
 impl DriveInfo {
     pub fn parse(path: PathBuf) -> Result<Self, OsError> {
-        let root = path
-            .ancestors()
-            .last()
-            .unwrap()
-            .to_string_lossy()
-            .to_string(); // this unwrap is safe as .ancestors() always returns at least one value
+        // Get drive root
+        let root = path.ancestors().last().unwrap().to_string_lossy(); // this unwrap is safe as .ancestors() always returns at least one value
 
-        let letter = path
-            .components()
-            .next()
-            .unwrap()
-            .as_os_str()
-            .to_string_lossy()
-            .chars()
-            .next()
-            .unwrap();
-
-        let mut volume = winapi_call(
-            50_usize,
-            |volume, size| unsafe {
-                GetVolumeNameForVolumeMountPointW(winapi_str(&root), volume, size as u32)
+        // Get drive volume
+        let volume: String = WinapiExt::call(
+            50,
+            |size, volume| unsafe {
+                GetVolumeNameForVolumeMountPointA(
+                    root.to_string().as_ptr() as *const i8,
+                    volume as *mut i8,
+                    size as u32,
+                )
             },
-            |code| code != 0,
-        )?
-        .to_str()
-        .unwrap()
-        .trim_end_matches('\\') // remove trailing backslashes
-        .to_string();
+            |status| status != 0,
+            true,
+        )?;
 
-        // Because we convert the volume name from a c-string into a rust string the null byte at the end gets removed,
-        // so we have to manually add it back before passing it to the createfile method
+        debug!("Targeting volume: {:?}", volume);
+
+        // Remove the trailing backslashes from the volume name
+        // Because for some reason CreateFile does not accept them
+        let mut volume = volume.trim_end_matches('\\').to_string();
+
+        // Append a null byte to terminate the string
         volume.push('\0');
 
-        let handle = unsafe {
+        // Get drive handle
+        let handle: Handle = unsafe {
+            // Note that we aren't actually creating a file,
+            // just opening a handle to the device
             CreateFileA(
                 volume.as_ptr() as *const i8,
                 GENERIC_READ,
@@ -73,17 +79,30 @@ impl DriveInfo {
                 0,
                 ptr::null_mut(),
             )
+            .into()
         };
 
-        if handle == INVALID_HANDLE_VALUE {
+        if !handle.is_valid() {
             return Err(get_last_error().into());
         }
 
-        // Read NTFS-specific metadata off the disk
-        let boot = unsafe { BootSector::read_from(handle)? };
+        // Read drive bootsector
+        let boot = unsafe {
+            let data = read_file(&handle, 512, None)?;
+            let boot: BootSector = *PtrCast::cast(data.as_ptr());
 
-        // Once-off math to help offset calculations later
-        let bytes_per_mft_record: u64 = if boot.clusters_per_mft_record >= 128 {
+            // Ensure this is actually an NTFS drive by comparing the metadata to the expected signature
+            if boot.signature != NTFS {
+                Err(OsError::from(
+                    "attemped to scan non-ntfs drive as if it were ntfs, this is likely a bug",
+                ))
+            } else {
+                Ok(boot)
+            }
+        }?;
+
+        // Calculate the number of bytes per mft record
+        let bytes_per_mft_record = if boot.clusters_per_mft_record >= 128 {
             1 << (256 - boot.clusters_per_mft_record as u8 as u16) as u8
         } else {
             (boot.clusters_per_mft_record
@@ -93,18 +112,9 @@ impl DriveInfo {
 
         Ok(DriveInfo {
             path,
-            root,
-            letter,
-            volume,
             handle,
             boot,
             bytes_per_mft_record,
         })
-    }
-}
-
-impl Drop for DriveInfo {
-    fn drop(&mut self) {
-        unsafe { CloseHandle(self.handle) };
     }
 }

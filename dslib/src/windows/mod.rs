@@ -1,5 +1,4 @@
 mod alt;
-mod boot;
 mod drive;
 mod error;
 mod filesystem;
