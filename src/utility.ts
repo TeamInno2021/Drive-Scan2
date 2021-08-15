@@ -11,7 +11,7 @@ export namespace dsutils {
             properties: ["openDirectory"],
         });
         Scan.scan(result[0]);
-        console.log(Scan.query(result[0]));
+        //console.log(Scan.query(result[0]));
     }
 
     export interface PieFileSlice {
@@ -22,11 +22,10 @@ export namespace dsutils {
     }
 
     export type PieData = {
-        color:   string,
-        value:   number,
-        key:     string,
-        title:   string,
-        strsize: string
+        value:      number,
+        fileName:   string,
+        path:       string,
+        strSize:    string
     }
 
     export function pfsFromFileChildren(root: dslib.File): Array<PieFileSlice> {
@@ -43,37 +42,34 @@ export namespace dsutils {
     }
 
     export function pieDataFromFileChildren(root: dslib.File): Array<PieData> {
-        let pieDataArray = new Array(root.children.length);
-        //Temporary hardcoded segment colours
-        let pieColours = ['#f07178','#F78C6C','#FFCB6B','#C3E88D','#82AAFF','#C792EA']
+        let pieDataArray = new Array(0);
         let totalSize = 0
         //Shallow clone the children
         let sortedChildren = [...root.children];
-        //Then sort the children by their sizes
-        sortedChildren.sort((a, b) => (a.size > b.size) ? 1 : -1)
-        for (let i = 0; (i<sortedChildren.length && i<=6); i++) {
-            if (i<6) {
+        //Then sort the children by their sizes, (largest to smallest)
+        sortedChildren.sort((a, b) => (a.size < b.size) ? 1 : -1)
+        console.log(sortedChildren)
+        for (let i = 0; (i<sortedChildren.length && i<6); i++) {
+            if (i<5) {
                 let file = sortedChildren[i];
                 let slice = {
-                    color: pieColours[i],
                     value: file.size/root.size,
-                    key: file.path,
-                    title: path.basename(file.path),
-                    strsize: strConvert(file.size)
+                    fileName: path.basename(file.path),
+                    path: file.path,
+                    strSize: strConvert(file.size)
                 }
-                console.log(slice);
+                //console.log(slice);
                 pieDataArray.push(slice);
                 //Append the size of this folder to the list
-                totalSize += root.children[i].size;
+                totalSize += sortedChildren[i].size;
             }
             else {
                 //Append one slice to stand for all the others
                 pieDataArray.push({
-                    color: pieColours[i],
-                    value: root.size-totalSize,
-                    key: "",
-                    title: "Others",
-                    strsize: strConvert(root.size-totalSize)
+                    value: (root.size-totalSize)/(root.size),
+                    fileName: "Others",
+                    path: "",
+                    strSize: strConvert(root.size-totalSize)
                 })
             }
         }

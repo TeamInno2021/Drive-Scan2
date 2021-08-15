@@ -12,8 +12,8 @@
         "@saleae/ffi": "^3.0.2",
         "dslib": "file:./dslib/pkg",
         "react-charts": "^2.0.0-beta.7",
-        "react-minimal-pie-chart": "^8.2.0",
         "react-splitter-layout": "^4.0.0",
+        "recharts": "^2.1.0",
         "save": "^2.4.0"
     },
     "devDependencies": {

@@ -10,7 +10,7 @@ import 'react-splitter-layout/lib/index.css';
 
 //Pie Chart
 import { Chart } from 'react-charts'
-import { Pie } from "./Pie";
+import { FolderPie } from "./Pie";
 
 export class App extends Component<{}, { currentPage: string, currentFolder: dslib.File, }> { 
     
@@ -31,15 +31,14 @@ export class App extends Component<{}, { currentPage: string, currentFolder: dsl
             properties: ["openDirectory"],
         });
         Scan.scan(result[0]);
-        console.log({currentPage:"mainviewpage", currentFolder:Scan.query(result[0])});
         await this.setState({currentPage:"mainviewpage", currentFolder:Scan.query(result[0])});
         console.log(this.state.currentFolder);
     }
 
     //Method to allow the pie chart and folder view to update the currentfolder
-    async setCurrentFolder(newFolder: dslib.File) {
-        this.setState({ currentFolder: newFolder });
-    }
+    // async setCurrentFolder(newFolder: dslib.File) {
+    //     await this.setState({ currentFolder: newFolder });
+    // }
 
     //Method to allow the pie chart and folder view to get the currentfolder
     getCurrentFolder(): dslib.File {
@@ -69,7 +68,7 @@ export class App extends Component<{}, { currentPage: string, currentFolder: dsl
                             </div>
                             {/* PieView */}
                             <div>
-                                <Pie getCurrentFolder={this.getCurrentFolder} setCurrentFolder={this.setCurrentFolder}/>
+                                <FolderPie appComponent={this}/>
                             </div>
                         </SplitterLayout>
                     </div>
