@@ -17,6 +17,7 @@ import { ResponsiveContainer, Sector, Cell, Pie, PieChart, Tooltip } from "recha
 import { TableRow } from "@material-ui/core";
 import { contextIsolated } from "process";
 import { App } from "./App"
+import { rename } from "fs";
 
 
 
@@ -44,13 +45,13 @@ const PIECOLOURS = ['#f07178','#F78C6C','#FFCB6B','#C3E88D','#82AAFF','#C792EA']
 //     );
 //   };
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = (entry) => {
     console.log("e")
-    if (payload && payload.length) {
+    if (entry.payload && entry.payload.length) {
         return (
         <div className="custom-tooltip">
-            <p className="label">{`${label} : ${payload[0].value}`}</p>
-            <p className="desc">{payload[0].value}</p>
+            <p className="label">{`${entry.label} : ${entry.payload[0].value}`}</p>
+            <p className="desc">{entry.payload[0].value}</p>
         </div>
         );
     }
@@ -72,13 +73,15 @@ export class FolderPie extends Component<PieProps, { hovered: number }> {
         }
     }
 
-    renderCustomizedLabel = (entry: Utility.dsutils.PieData) => {
-        return entry.name + ': ' + entry.strSize
-        // return (<p>
-        //     <text fontSize={12}>
-        //         {`${entry.fileName}\n${entry.strSize}`}
-        //     </text>  
-        // </p>)
+    renderCustomizedLabel = (entry: any) => {
+        if (entry.index == this.state.hovered) {
+            return entry.name + ': ' + entry.strSize
+            // return  (<text fontSize={12}>
+            //             {`${entry.fileName}\n${entry.strSize}`}
+            //         </text>)  
+        } else {
+            return
+        }
     };
 
     render(): JSX.Element {
@@ -119,9 +122,9 @@ export class FolderPie extends Component<PieProps, { hovered: number }> {
             //         this.setState({ hovered: undefined });
             //     }}
             // />
-            
+
             return (
-                <PieChart width={1200} height={600}>
+                <PieChart width={2000} height={600}>
                     <Pie
                         cx={"50%"} 
                         cy={"50%"}
@@ -129,6 +132,8 @@ export class FolderPie extends Component<PieProps, { hovered: number }> {
                         // height={50}
                         data={pieData}
                         alignmentBaseline="central"
+                        //Should not have to do this, bug with recharts
+                        isAnimationActive={false}
                         labelLine={false}
                         label={this.renderCustomizedLabel}
                         outerRadius={"50%"}
@@ -156,13 +161,13 @@ export class FolderPie extends Component<PieProps, { hovered: number }> {
                             } 
                         }}
                     >
-                        {/* <Tooltip
+                        <Tooltip
                             active={true}
                             wrapperStyle={{
                                 visibility: 'visible',
                             }}
                             content={<CustomTooltip />}
-                        /> */}
+                        />
                         {pieData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={PIECOLOURS[index]}/>
                         ))}
