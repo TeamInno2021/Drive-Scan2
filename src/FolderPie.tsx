@@ -3,6 +3,7 @@ import * as Utility from "./utility";
 import * as Scan from "./scan";
 import * as Electron from "electron";
 import { File } from "dslib";
+import open from "open";
 
 //Splitter Layout
 import SplitterLayout from 'react-splitter-layout';
@@ -142,8 +143,21 @@ export class FolderPie extends Component<PieProps, { hovered: number }> {
                         onMouseEnter={(e, hovered) => this.setState({ hovered }) }
                         onMouseLeave={() => this.setState({ hovered: -1 }) }
                         onClick={(entry, e) => {
-                            //Change the currentfolder to this new path
-                            this.props.appComponent.setCurrentFolder(Scan.query(entry.path));
+                            //If to catch whether the user has clicked on the "Others" slice, in which case we want to do nothing
+                            if (entry.directory != undefined) {
+                                console.log(entry);
+                                console.log(`Pie: User clicked on pie sector \"${entry.name}\"`);
+                                if (entry.directory == true) {
+                                    console.log(`Pie: Changing to selected directory:\n\"${entry.path}\"`);
+                                    let newCurrentFolder = Scan.query(entry.path);
+                                    //Change the currentfolder to this new path
+                                    this.props.appComponent.setCurrentFolder(newCurrentFolder);
+                                } else {
+                                    console.log(`Pie: Opening selected file in default application:\n\"${entry.path}\"`);
+                                    //Open the file in the default application
+                                    open(entry.path);
+                                }
+                            } 
                         }}
                     >
                         {/* <Tooltip

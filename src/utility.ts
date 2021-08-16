@@ -38,7 +38,7 @@ export namespace dsutils {
                     name: path.basename(file.path),
                     path: file.path,
                     strSize: strConvert(file.size),
-                    directory: (file.children!=undefined)
+                    directory: (file.children!==undefined)
                 }
                 //console.log(slice);
                 pieDataArray.push(slice);
