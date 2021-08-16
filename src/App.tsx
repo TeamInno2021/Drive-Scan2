@@ -46,8 +46,20 @@ export class App extends Component<{}, { currentpage: string, currentFolder: dsl
     renderTree = (nodes: dslib.File) => (
         <TreeItem key={nodes.path} nodeId={nodes.path} label={path.basename(nodes.path ) + strConvert(nodes.size)}>
             {Array.isArray(nodes.children) ? nodes.children.map((node) => this.renderTree(node)) : null}
+            {/* nodesFromChildren(nodes.children); */}
         </TreeItem>
     );
+
+    // nodesFromChildren (children?: [dslib.File]) {
+    //     let nodeChildren = [];
+
+    //     if (children) {
+    //         children.forEach(child => {
+    //             nodeChildren.push(this.renderTree(child)); 
+    //         });
+    //     }
+    //     return nodeChildren;   
+    // }
 
     render(): JSX.Element {
         if(this.state.currentpage == "scanpage") {
@@ -57,7 +69,7 @@ export class App extends Component<{}, { currentpage: string, currentFolder: dsl
             </h3>;
         }
         else if(this.state.currentpage == "mainviewpage") {   
-            if (this.state.folderTree.size == 0) {                                     
+            if (this.state.folderTree.size != 0) {                                     
                 return <h1>
                     <SplitterLayout vertical={false}>
                         {/* TreeView */}
