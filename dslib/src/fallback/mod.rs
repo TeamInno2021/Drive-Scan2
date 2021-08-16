@@ -80,8 +80,8 @@ impl HashFile {
     #[rustfmt::skip]
     pub fn new(path: PathBuf, size: usize, directory: bool) -> HashFile {
         match directory {
-            true  => HashFile { path, size, children: None },
-            false => HashFile { path, size, children: Some(HashMap::new()) }
+            true   => HashFile { path, size, children: Some(HashMap::new()) },
+            false  => HashFile { path, size, children: None }
         }
     }
 
