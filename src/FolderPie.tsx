@@ -2,7 +2,7 @@ import React, { Component, ReactElement } from "react";
 import * as Utility from "./utility";
 import * as Scan from "./scan";
 import * as Electron from "electron";
-import dslib, { File, query } from "dslib";
+import { File } from "dslib";
 
 //Splitter Layout
 import SplitterLayout from 'react-splitter-layout';
@@ -17,11 +17,7 @@ import { TableRow } from "@material-ui/core";
 import { contextIsolated } from "process";
 import { App } from "./App"
 
-interface Props { 
-    //getCurrentFolder: () => dslib.File, 
-    //setCurrentFolder: (newFolder: dslib.File) => any
-    appComponent: App 
-}
+
 
 const PIESECTORS = [
     { cx: 250, cy: 250, startAngle: 0, endAngle: 60, innerRadius: 100, outerRadius: 200 },
@@ -35,6 +31,17 @@ const PIESECTORS = [
 //Temporary hardcoded segment colours
 const PIECOLOURS = ['#f07178','#F78C6C','#FFCB6B','#C3E88D','#82AAFF','#C792EA']
 
+// const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }) => {
+//     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+//     const x = cx + radius * Math.cos(-midAngle * RADIAN);
+//     const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  
+//     return (
+//       <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
+//         {`${(percent * 100).toFixed(0)}%`}
+//       </text>
+//     );
+//   };
 
 const CustomTooltip = ({ active, payload, label }: any) => {
     console.log("e")
@@ -49,14 +56,29 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return null;
 };
 
-export class FolderPie extends Component<Props, { hovered: number }> {    
+interface PieProps { 
+    //getCurrentFolder: () => dslib.File, 
+    //setCurrentFolder: (newFolder: dslib.File) => any
+    appComponent: App 
+}
+
+export class FolderPie extends Component<PieProps, { hovered: number }> {    
     
-    constructor(props: Props) {
+    constructor(props: PieProps) {
         super(props)
         this.state = {
             hovered: null
         }
     }
+
+    renderCustomizedLabel = (entry: Utility.dsutils.PieData) => {
+        return entry.name + ': ' + entry.strSize
+        // return (<p>
+        //     <text fontSize={12}>
+        //         {`${entry.fileName}\n${entry.strSize}`}
+        //     </text>  
+        // </p>)
+    };
 
     render(): JSX.Element {
         if (this.props.appComponent.state.currentFolder.children) {
@@ -102,38 +124,40 @@ export class FolderPie extends Component<Props, { hovered: number }> {
 
             console.log("PieData: " + pieData)
             return (
-                <ResponsiveContainer width={500} height={500}>
-                    <PieChart width={500} height={500}>
-                        <Pie
-                            data={pieData}
-                            cx="50%"
-                            cy="50%"
-                            // labelLine={false}
-                            // label={renderCustomizedLabel}
-                            outerRadius={"50%"}
-                            fill="#8884d8"
-                            dataKey="value"
-                            nameKey="fileName"
-                            sectors={PIESECTORS}
-                            onMouseEnter={(e, hovered) => this.setState({ hovered }) }
-                            onMouseLeave={() => this.setState({ hovered: -1 }) }
-                            onClick={(data, index, e) => {
-                                
+                <PieChart width={600} height={600}>
+                    <Pie
+                        cx={"50%"} 
+                        cy={"50%"}
+                        // width={50}
+                        // height={50}
+                        data={pieData}
+                        alignmentBaseline="central"
+                        labelLine={false}
+                        label={this.renderCustomizedLabel}
+                        outerRadius={"50%"}
+                        fill="#8884d8"
+                        dataKey="value"
+                        nameKey="fileName"
+                        sectors={PIESECTORS}
+                        onMouseEnter={(e, hovered) => this.setState({ hovered }) }
+                        onMouseLeave={() => this.setState({ hovered: -1 }) }
+                        onClick={(entry, e) => {
+                            //Change the currentfolder to this new path
+                            this.props.appComponent.setCurrentFolder(Scan.query(entry.path));
+                        }}
+                    >
+                        {/* <Tooltip
+                            active={true}
+                            wrapperStyle={{
+                                visibility: 'visible',
                             }}
-                        >
-                            <Tooltip
-                                active={true}
-                                wrapperStyle={{
-                                    visibility: 'visible',
-                                }}
-                                content={<CustomTooltip />}
-                            />
-                            {pieData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={PIECOLOURS[index]} />
-                            ))}
-                        </Pie>
-                    </PieChart>
-                </ResponsiveContainer>
+                            content={<CustomTooltip />}
+                        /> */}
+                        {pieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={PIECOLOURS[index]}/>
+                        ))}
+                    </Pie>
+                </PieChart>
               );
         }
         else {

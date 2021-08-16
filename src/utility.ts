@@ -14,31 +14,12 @@ export namespace dsutils {
         //console.log(Scan.query(result[0]));
     }
 
-    export interface PieFileSlice {
-        path: string,   //Path of the file
-        name: string,   //Name of the file
-        size: string,   //Size of the file as a string with units
-        perc: string,   //Percentage of the parent folder
-    }
-
     export type PieData = {
         value:      number,
-        fileName:   string,
+        name:       string,
         path:       string,
-        strSize:    string
-    }
-
-    export function pfsFromFileChildren(root: dslib.File): Array<PieFileSlice> {
-        let pfsArray = new Array(root.children.length);
-        root.children.forEach(function (file: dslib.File) {
-            pfsArray.push({
-                path: file.path,
-                name: path.basename(file.path),
-                size: strConvert(file.size),
-                perc: '${file.size/root.size}%'
-            });
-        });
-        return pfsArray;
+        strSize:    string,
+        directory?:  boolean
     }
 
     export function pieDataFromFileChildren(root: dslib.File): Array<PieData> {
@@ -54,9 +35,10 @@ export namespace dsutils {
                 let file = sortedChildren[i];
                 let slice = {
                     value: file.size/root.size,
-                    fileName: path.basename(file.path),
+                    name: path.basename(file.path),
                     path: file.path,
-                    strSize: strConvert(file.size)
+                    strSize: strConvert(file.size),
+                    directory: (file.children!=undefined)
                 }
                 //console.log(slice);
                 pieDataArray.push(slice);
@@ -67,9 +49,10 @@ export namespace dsutils {
                 //Append one slice to stand for all the others
                 pieDataArray.push({
                     value: (root.size-totalSize)/(root.size),
-                    fileName: "Others",
+                    name: "Others",
                     path: "",
-                    strSize: strConvert(root.size-totalSize)
+                    strSize: strConvert(root.size-totalSize),
+                    directory: undefined
                 })
             }
         }
