@@ -33,18 +33,6 @@ const PIESECTORS = [
 //Temporary hardcoded segment colours
 const PIECOLOURS = ['#f07178','#F78C6C','#FFCB6B','#C3E88D','#82AAFF','#C792EA']
 
-// const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }) => {
-//     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-//     const x = cx + radius * Math.cos(-midAngle * RADIAN);
-//     const y = cy + radius * Math.sin(-midAngle * RADIAN);
-  
-//     return (
-//       <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
-//         {`${(percent * 100).toFixed(0)}%`}
-//       </text>
-//     );
-//   };
-
 const CustomTooltip = (entry) => {
     console.log("e")
     if (entry.payload && entry.payload.length) {
@@ -86,42 +74,7 @@ export class FolderPie extends Component<PieProps, { hovered: number }> {
 
     render(): JSX.Element {
         if (this.props.appComponent.state.currentFolder.children) {
-            // return <Chart
-            // height='400px'
-            // width='400px'
-            // outerBorderWidth='1px'
-            // dataSource={Utility.dsutils.pfsFromFileChildren(this.props.currentFolderHook())}
-            // xName='name'
-            // yName='perc'
-            // pieChartExplode={true}
-            // pieChartExplodeOffset='10%'
-            // pieChartExplodeIndex={1}
-            // pieChartRadius={150}
-            // title='Expense details'
-            // tooltip={{ enable: true }}
-            // type='PieChart'
-            // />
             let pieData = Utility.dsutils.pieDataFromFileChildren(this.props.appComponent.state.currentFolder);
-            //console.log("Rendering Pie with the following: " + pieData);
-            // return <PieChart
-            //     data={pieData}
-            //     radius={PieChart.defaultProps.radius - 6}
-            //     segmentsStyle={{ transition: 'stroke .3s', cursor: 'pointer' }}
-            //     //Set the segmentsShift to be 0 for anything that isn't hovered and X 
-            //     // segmentsShift={(index: number): number => {
-            //     //     if (this.state.hovered && this.state.hovered == index)  { return 6 } 
-            //     //     else                                                    { return 0 }
-            //     // }}
-            //     onClick={(event, index) => {
-            //         //TODO: Change app's state
-            //     }}
-            //     onMouseOver={(_, index) => {
-            //         this.setState({ hovered: index });
-            //     }}
-            //     onMouseOut={() => {
-            //         this.setState({ hovered: undefined });
-            //     }}
-            // />
 
             return (
                 <PieChart width={2000} height={600}>
