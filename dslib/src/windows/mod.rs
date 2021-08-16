@@ -6,7 +6,7 @@ mod mft;
 mod winapi;
 
 use super::File;
-use drive::DriveInfo;
+// use drive::DriveInfo;
 use error::OsError;
 use std::mem::size_of;
 use std::path::{Path, PathBuf};
@@ -21,15 +21,16 @@ pub fn verify(dir: &Path) -> Result<bool, Box<dyn ::std::error::Error>> {
     } else if !dir.is_dir() {
         Err("target path is not a valid directory".into())
     } else {
-        Ok(filesystem::identify(dir)? == "NTFS")
+        Ok(true) // todo remove
+        // Ok(filesystem::identify(dir)? == "NTFS")
     }
 }
 
 pub fn scan(dir: PathBuf) -> Result<(), Box<dyn ::std::error::Error>> {
-    // alt::scan(dir);
+    alt::scan(dir);
 
-    let drive = DriveInfo::parse(dir.clone())?;
-    let _nodes = mft::process(drive)?;
+    // let drive = DriveInfo::parse(dir.clone())?;
+    // let _nodes = mft::process(drive)?;
     // info!("{:#?}", nodes);
     Ok(())
 }
