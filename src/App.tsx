@@ -1,7 +1,6 @@
 import React, { Component } from "react";
 import * as Scan from "./scan";
 import * as Electron from "electron";
-import dslib from "dslib";
 import path from "path";
 
 //Splitter Layout

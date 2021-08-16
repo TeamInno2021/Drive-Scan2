@@ -2,7 +2,6 @@ import React, { Component, ReactElement } from "react";
 import * as Utility from "./utility";
 import * as Scan from "./scan";
 import * as Electron from "electron";
-import dslib from "dslib";
 import open from "open";
 
 //Splitter Layout
@@ -105,7 +104,7 @@ export class FolderPie extends Component<PieProps, { hovered: number }> {
                                 } else {
                                     console.log(`Pie: Opening selected file in default application:\n\"${entry.path}\"`);
                                     //Open the file in the default application
-                                    open(entry.path);
+                                    Electron.shell.openPath(entry.path);
                                 }
                             } 
                         }}
