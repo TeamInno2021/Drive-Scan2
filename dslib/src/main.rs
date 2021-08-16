@@ -4,5 +4,8 @@ fn main() {
     __init();
 
     scan("W:\\Coding\\Drive-Scan2\\dslib".into()).unwrap();
-    println!("{:#?}", query("W:\\Coding\\Drive-Scan2\\dslib\\src".into()).unwrap());
+    println!(
+        "{:#?}",
+        query("W:\\Coding\\Drive-Scan2\\dslib\\src".into()).unwrap()
+    );
 }

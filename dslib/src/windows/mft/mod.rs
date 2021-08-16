@@ -1,3 +1,7 @@
+//! Beware this code is very messy and everytime I tried to optimize it things broke
+//! If you want some nicer code go to `dslib/src/windows/winapi.rs`
+//!                 - Nigel
+
 mod raw;
 
 use super::drive::DriveInfo;
@@ -5,10 +9,14 @@ use super::winapi::read_file;
 use super::OsError;
 use raw::*;
 
+use lazy_static::lazy_static;
 use num_traits::FromPrimitive;
 
+use std::collections::HashMap;
 use std::ffi::OsString;
+use std::os::windows::prelude::OsStringExt;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Mutex;
 use std::time::Instant;
 use std::{cmp, mem};
 
@@ -82,25 +90,25 @@ pub fn find_stream(
     None
 }
 
-// lazy_static! {
-//     // Preallocate string index
-//     static ref NAME_INDEX: Mutex<HashMap<OsString, usize>> = Mutex::new(HashMap::with_capacity(128 * 1024));
-//     static ref NAMES: Mutex<Vec<OsString>> = Mutex::new(Vec::new());
-// }
+lazy_static! {
+    // Preallocate string index
+    static ref NAME_INDEX: Mutex<HashMap<OsString, usize>> = Mutex::new(HashMap::with_capacity(128 * 1024));
+    static ref NAMES: Mutex<Vec<OsString>> = Mutex::new(Vec::new());
+}
 
-// fn get_name_index(name: OsString) -> usize {
-//     let mut name_index = NAME_INDEX.lock().unwrap();
-//     let mut names = NAMES.lock().unwrap();
+fn get_name_index(name: OsString) -> usize {
+    let mut name_index = NAME_INDEX.lock().unwrap();
+    let mut names = NAMES.lock().unwrap();
 
-//     if let Some(current) = name_index.get(&name) {
-//         *current
-//     } else {
-//         names.push(name.clone());
-//         name_index.insert(name, names.len() - 1);
+    if let Some(current) = name_index.get(&name) {
+        *current
+    } else {
+        names.push(name.clone());
+        name_index.insert(name, names.len() - 1);
 
-//         names.len() - 1
-//     }
-// }
+        names.len() - 1
+    }
+}
 
 pub unsafe fn process_run_length(
     run_data: *mut u8,
@@ -284,7 +292,7 @@ pub fn process(drive: DriveInfo) -> Result<Vec<MftNode>, OsError> {
         if node_index >= block_end as u32 {
             // Read the next chunk
             {
-                let mut fragment_index = fragment_index.clone();
+                let mut fragment_index = fragment_index;
                 block_start = node_index as u64;
                 block_end =
                     block_start as u64 + BUF_SIZE as u64 / drive.bytes_per_mft_record as u64;
@@ -540,14 +548,14 @@ fn process_record(
                         Some(attribute_filename.parent_directory.inode_number_low);
 
                     if attribute_filename.name_type == 1 || node.name_index == Some(0) {
-                        // let name = unsafe {
-                        //     OsString::from_wide(std::slice::from_raw_parts(
-                        //         attribute_filename.name as *const u16,
-                        //         attribute_filename.name_length as usize,
-                        //     ))
-                        // };
-                        // println!("{:?}", name);
-                        // node.name_index = Some(get_name_index(name));
+                        let name = unsafe {
+                            OsString::from_wide(std::slice::from_raw_parts(
+                                attribute_filename.name as *const u16,
+                                attribute_filename.name_length as usize,
+                            ))
+                        };
+                        println!("{:?}", name);
+                        node.name_index = Some(get_name_index(name));
                         //fixme improve
                         // print!("File name ");
                         // for c_index in 0..attribute_filename.name_length as usize * 2
@@ -589,21 +597,21 @@ fn process_record(
                 node.size = Some(nonresident_attribute.data_size);
             }
 
-            let name_index = 0;
+            let mut name_index = 0;
 
             if attribute.name_length > 0 {
-                // let name = unsafe {
-                //     OsString::from_wide(std::slice::from_raw_parts(
-                //         buffer
-                //             .wrapping_add(record.attribute_offset as usize)
-                //             .wrapping_add(offset as usize)
-                //             .wrapping_add(nonresident_attribute.data_size as usize)
-                //             as *const u16,
-                //         attribute.name_offset as usize,
-                //     ))
-                // };
-                // println!("{:?}", name);
-                // name_index = get_name_index(name);
+                let name = unsafe {
+                    OsString::from_wide(std::slice::from_raw_parts(
+                        buffer
+                            .wrapping_add(record.attribute_offset as usize)
+                            .wrapping_add(offset as usize)
+                            .wrapping_add(nonresident_attribute.data_size as usize)
+                            as *const u16,
+                        attribute.name_offset as usize,
+                    ))
+                };
+                println!("{:?}", name);
+                name_index = get_name_index(name);
                 // fixme improve
                 // this is a directory
                 // let name_pos = buffer
