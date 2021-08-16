@@ -22,10 +22,7 @@ pub fn query(ctx: CallContext) -> Result<JsUnknown> {
     let dir: PathBuf = ctx.get::<JsString>(0)?.into_utf8()?.as_str()?.into();
 
     match super::query(dir) {
-        Ok(dir) => match dir {
-            Some(dir) => ctx.env.to_js_value(&dir),
-            None => Ok(ctx.env.get_undefined()?.into_unknown()),
-        },
+        Ok(dir) => ctx.env.to_js_value(&dir),
         Err(e) => Err(Error::new(Status::Unknown, e.to_string())),
     }
 }
