@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React, { Component, DetailsHTMLAttributes } from "react";
 import * as Utility from "./utility";
 import * as Scan from "./scan";
 import * as Electron from "electron";
@@ -9,23 +9,45 @@ import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import ChevronRightIcon from '@material-ui/icons/ChevronRight';
 import TreeItem from '@material-ui/lab/TreeItem';
 import Path from 'path';
+import dslib, {File, scan} from "dslib";
+import path from "path";
+import { strConvert } from "./conversion";
 
-export class App extends Component<{}, { currentpage: string }> { 
+export class App extends Component<{}, { currentpage: string, currentFolder: dslib.File, folderTree: dslib.File, rootPath: string }> { 
     
     constructor(props:{}) {
         super(props)
-        this.state = {currentpage:"scanpage"}
+        this.state = {
+            currentpage:"scanpage", 
+            currentFolder: { 
+                path: "",
+                size: 0, 
+                children: [], 
+            },
+            folderTree: { 
+                path: "",
+                size: 0, 
+                children: [],
+            }, 
+            rootPath: "", 
+        }
     }
 
-    getDirectory() {
+    async getDirectory() {
+
         let result = Electron.remote.dialog.showOpenDialogSync({
             properties: ["openDirectory"],
         });
         Scan.scan(result[0]);
         console.log(Scan.query(result[0]));
-        this.setState({currentpage:"mainviewpage"})
+        await this.setState({currentpage:"mainviewpage", rootPath: result[0], currentFolder: Scan.query(result[0]), folderTree: Scan.query(result[0])})
     }
     
+    renderTree = (nodes: dslib.File) => (
+        <TreeItem key={nodes.path} nodeId={nodes.path} label={path.basename(nodes.path ) + strConvert(nodes.size)}>
+            {Array.isArray(nodes.children) ? nodes.children.map((node) => this.renderTree(node)) : null}
+        </TreeItem>
+    );
 
     render(): JSX.Element {
         if(this.state.currentpage == "scanpage") {
@@ -34,65 +56,42 @@ export class App extends Component<{}, { currentpage: string }> {
             <input id="button" type="button" value="Directory" onClick={this.getDirectory.bind(this)}/>
             </h3>;
         }
-        else if(this.state.currentpage == "mainviewpage") {
+        else if(this.state.currentpage == "mainviewpage") {   
+            if (this.state.folderTree.size == 0) {                                     
+                return <h1>
+                    <SplitterLayout vertical={false}>
+                        {/* TreeView */}
+                        <div>
 
-            let scandata = Scan.query("C:\\")
-                interface RenderTree {
-                id: string;
-                name: string;
-                children?: RenderTree[]; 
-                }
+                        <TreeView
+                            defaultCollapseIcon={<ExpandMoreIcon />}
+                            defaultExpanded={['root']}
+                            defaultExpandIcon={<ChevronRightIcon />}
+                        >
+                            {this.renderTree(this.state.folderTree)}
+                        </TreeView>
+                
+                        </div>
+                        {/* Folder and Pie Views In Horizontal Splitter */}
+                        <div>
+                            <SplitterLayout vertical={true}>
+                                {/* FolderView */}
+                                <div>
+                                    Alex Put the Folder View Here
+                                </div>
+                                {/* PieView */}
+                                <div>
+                                    Ben Put the Pie Here
+                                </div>
+                            </SplitterLayout>
+                        </div>
+                    </SplitterLayout>
+                </h1>
+            }
+            else {
+                return null;
+            }
 
-                    let children = [];
-
-                    for (let i  = 0; i < scandata.children.length; i++) {
-                        console.log(i);
-                        children.push( {
-                        id: `${i}`,
-                        name: Path.basename(scandata.children[i].path) + " - " + scandata.children[i].size,
-                    },);
-                }
-
-                const data: RenderTree = {
-                    id: 'root',
-                    name: scandata.path + " - " + scandata.size,
-                    children:children
-                };
-
-                const renderTree = (nodes: RenderTree) => (
-                    <TreeItem key={nodes.id} nodeId={nodes.id} label={nodes.name}>
-                        {Array.isArray(nodes.children) ? nodes.children.map((node) => renderTree(node)) : null}
-                    </TreeItem>
-                );
-            return <h1>
-                <SplitterLayout vertical={false}>
-                    {/* TreeView */}
-                    <div>
-
-                    <TreeView
-                        defaultCollapseIcon={<ExpandMoreIcon />}
-                        defaultExpanded={['root']}
-                        defaultExpandIcon={<ChevronRightIcon />}
-                    >
-                        {renderTree(data)}
-                    </TreeView>
-               
-                    </div>
-                    {/* Folder and Pie Views In Horizontal Splitter */}
-                    <div>
-                        <SplitterLayout vertical={true}>
-                            {/* FolderView */}
-                            <div>
-                                Alex Put the Folder View Here
-                            </div>
-                            {/* PieView */}
-                            <div>
-                                Ben Put the Pie Here
-                            </div>
-                        </SplitterLayout>
-                    </div>
-                </SplitterLayout>
-            </h1>
         }
     }
 }
