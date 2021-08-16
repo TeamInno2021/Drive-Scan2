@@ -7,10 +7,11 @@ import path from "path";
 //Splitter Layout
 import SplitterLayout from 'react-splitter-layout';
 import 'react-splitter-layout/lib/index.css';
+import { Button, ThemeProvider, Typography } from '@material-ui/core'
+import { createTheme } from "@material-ui/core/styles";
 
 //Pie Chart
 import { FolderPie } from "./FolderPie";
-import { Button } from "@material-ui/core";
 
 export class App extends Component<{}, { currentPage: string, currentFolder: dslib.File, rootPath: string}> { 
     
@@ -52,13 +53,35 @@ export class App extends Component<{}, { currentPage: string, currentFolder: dsl
 
     render(): JSX.Element {
         if(this.state.currentPage == "scanpage") {
-            return <h3>
-            Select
-            <input id="button" type="button" value="Directory" onClick={this.getDirectory.bind(this)}/>
-            </h3>;
+            return (
+                <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                    <ThemeProvider theme={createTheme({ palette: { type: "dark" } })}>
+                        <ul style={{ width: "100%", height: "100%" }}>
+                            <li style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                <Typography variant="h1" color="textPrimary">
+                                    Drive Scan
+                                </Typography>
+                            </li>
+                            <li style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                <Typography variant="h4" color="textSecondary">
+                                    Find the things chewing up your disk space
+                                </Typography>
+                            </li>
+                            <li style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                <br/>
+                            </li>
+                            <li style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                <Button variant="contained" color="primary" onClick={this.getDirectory.bind(this)}>
+                                    Scan Folder
+                                </Button>
+                            </li>
+                        </ul>
+                    </ThemeProvider>
+                </div>)
         }
-        else if(this.state.currentFolder != undefined && this.state.currentPage == "mainviewpage") {
-            return <h1>
+        else if(this.state.currentPage == "mainviewpage") {
+            return (
+            <ThemeProvider theme={createTheme({ palette: { type: "dark" } })}>
                 <SplitterLayout vertical={false}>
                     {/* TreeView */}
                     <div>
@@ -97,7 +120,7 @@ export class App extends Component<{}, { currentPage: string, currentFolder: dsl
                         </SplitterLayout>
                     </div>
                 </SplitterLayout>
-            </h1>
+            </ThemeProvider>)
         }
     }
 }
