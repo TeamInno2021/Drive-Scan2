@@ -10,7 +10,7 @@ import 'react-splitter-layout/lib/index.css';
 
 //Pie Chart
 import { FolderPie } from "./FolderPie";
-import { List } from "@material-ui/core";
+import { Button } from "@material-ui/core";
 
 export class App extends Component<{}, { currentPage: string, currentFolder: dslib.File, rootPath: string}> { 
     
@@ -73,10 +73,11 @@ export class App extends Component<{}, { currentPage: string, currentFolder: dsl
                             </div>
                             {/* PieView */}
                             <ul style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems:"center" }}>
-                                <li style={{ display: "flex", justifyContent: "right", alignItems: "right" }}>
-                                    <input id="button"
-                                        type="button" 
-                                        value="Up"
+                                <li style={{ display: "flex", justifyContent: "right", alignItems: "right", height: 40 }}>
+                                    <Button
+                                        color="primary"
+                                        size="medium"
+                                        variant="outlined"
                                         onClick={(e) => {
                                             //Check that we aren't already at the root of the scanned folder
                                             if (this.state.currentFolder.path !== this.state.rootPath) {
@@ -85,7 +86,9 @@ export class App extends Component<{}, { currentPage: string, currentFolder: dsl
                                                 this.setState({currentFolder: Scan.query(path.resolve(path.join(this.state.currentFolder.path, "..")))});
                                             }
                                         }}
-                                    />
+                                        //Disable the button if we are at the root scanned folder
+                                        disabled={this.state.currentFolder.path == this.state.rootPath}
+                                    >Up</Button>
                                 </li>
                                 <li>
                                     <FolderPie appComponent={this}/>
