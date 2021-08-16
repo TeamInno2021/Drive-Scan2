@@ -119,13 +119,9 @@ export class FolderPie extends Component<PieProps, { hovered: number }> {
             //         this.setState({ hovered: undefined });
             //     }}
             // />
-
-
             
-
-            console.log("PieData: " + pieData)
             return (
-                <PieChart width={600} height={600}>
+                <PieChart width={1200} height={600}>
                     <Pie
                         cx={"50%"} 
                         cy={"50%"}
@@ -144,7 +140,7 @@ export class FolderPie extends Component<PieProps, { hovered: number }> {
                         onMouseLeave={() => this.setState({ hovered: -1 }) }
                         onClick={(entry, e) => {
                             //If to catch whether the user has clicked on the "Others" slice, in which case we want to do nothing
-                            if (entry.directory != undefined) {
+                            if (entry.directory != null) {
                                 console.log(entry);
                                 console.log(`Pie: User clicked on pie sector \"${entry.name}\"`);
                                 if (entry.directory == true) {

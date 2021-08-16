@@ -29,7 +29,6 @@ export namespace dsutils {
         let sortedChildren = [...root.children];
         //Then sort the children by their sizes, (largest to smallest)
         sortedChildren.sort((a, b) => (a.size < b.size) ? 1 : -1)
-        console.log(sortedChildren)
         for (let i = 0; (i<sortedChildren.length && i<6); i++) {
             if (i<5) {
                 let file = sortedChildren[i];
@@ -38,7 +37,7 @@ export namespace dsutils {
                     name: path.basename(file.path),
                     path: file.path,
                     strSize: strConvert(file.size),
-                    directory: (file.children!==undefined)
+                    directory: (file.children!==null)
                 }
                 //console.log(slice);
                 pieDataArray.push(slice);
@@ -52,7 +51,7 @@ export namespace dsutils {
                     name: "Others",
                     path: "",
                     strSize: strConvert(root.size-totalSize),
-                    directory: undefined
+                    directory: null
                 })
             }
         }
