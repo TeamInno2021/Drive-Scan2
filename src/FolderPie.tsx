@@ -2,7 +2,7 @@ import React, { Component, ReactElement } from "react";
 import * as Utility from "./utility";
 import * as Scan from "./scan";
 import * as Electron from "electron";
-import { File } from "dslib";
+import dslib from "dslib";
 import open from "open";
 
 //Splitter Layout
@@ -13,12 +13,8 @@ import 'react-splitter-layout/lib/index.css';
 //import Chart from 'bk-react-charts'
 //import 'bk-react-charts/dist/index.css'
 //import { PieChart } from 'react-minimal-pie-chart';
-import { ResponsiveContainer, Sector, Cell, Pie, PieChart, Tooltip } from "recharts";
-import { TableRow } from "@material-ui/core";
-import { contextIsolated } from "process";
+import {  Cell, Pie, PieChart, Tooltip } from "recharts";
 import { App } from "./App"
-import { rename } from "fs";
-
 
 
 const PIESECTORS = [

@@ -1,19 +1,18 @@
 import React, { Component } from "react";
-import * as Utility from "./utility";
 import * as Scan from "./scan";
 import * as Electron from "electron";
-import dslib, { File, query } from "dslib";
+import dslib from "dslib";
+import path from "path";
 
 //Splitter Layout
 import SplitterLayout from 'react-splitter-layout';
 import 'react-splitter-layout/lib/index.css';
 
 //Pie Chart
-import { Chart } from 'react-charts'
 import { FolderPie } from "./FolderPie";
-import { ResponsiveContainer } from "recharts";
+import { List } from "@material-ui/core";
 
-export class App extends Component<{}, { currentPage: string, currentFolder: dslib.File, }> { 
+export class App extends Component<{}, { currentPage: string, currentFolder: dslib.File, rootPath: string}> { 
     
     constructor(props:{}) {
         super(props)
@@ -23,7 +22,8 @@ export class App extends Component<{}, { currentPage: string, currentFolder: dsl
                 path: "",
                 size: 0,
                 children: []
-            }
+            },
+            rootPath: ""
         }
     }
 
@@ -31,10 +31,13 @@ export class App extends Component<{}, { currentPage: string, currentFolder: dsl
         let result = Electron.remote.dialog.showOpenDialogSync({
             properties: ["openDirectory"],
         });
-        Scan.scan(result[0]);
-        console.log({currentPage:"mainviewpage", currentFolder:Scan.query(result[0])});
-        await this.setState({currentPage:"mainviewpage", currentFolder:Scan.query(result[0])});
-        console.log(this.state.currentFolder);
+        //If a folder is actually selected
+        if (result[0] !== undefined) {
+            Scan.scan(result[0]);
+            console.log({currentPage:"mainviewpage", currentFolder:Scan.query(result[0])});
+            await this.setState({currentPage:"mainviewpage", currentFolder:Scan.query(result[0]), rootPath: result[0]});
+            console.log(this.state.currentFolder);
+        }
     }
 
     //Method to allow the pie chart and folder view to update the currentfolder
@@ -69,9 +72,25 @@ export class App extends Component<{}, { currentPage: string, currentFolder: dsl
                                 Alex Put the Folder View Here
                             </div>
                             {/* PieView */}
-                            <div style={{display: "flex", justifyContent: "center", alignItems: "center"}}>
+                            <ul style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems:"center" }}>
+                                <li style={{ display: "flex", justifyContent: "right", alignItems: "right" }}>
+                                    <input id="button"
+                                        type="button" 
+                                        value="Up"
+                                        onClick={(e) => {
+                                            //Check that we aren't already at the root of the scanned folder
+                                            if (this.state.currentFolder.path !== this.state.rootPath) {
+                                                console.log(path.resolve(path.join(this.state.currentFolder.path, "..")));
+                                                //Traverse one folder up
+                                                this.setState({currentFolder: Scan.query(path.resolve(path.join(this.state.currentFolder.path, "..")))});
+                                            }
+                                        }}
+                                    />
+                                </li>
+                                <li>
                                     <FolderPie appComponent={this}/>
-                            </div>                       
+                                </li>
+                            </ul>                       
                         </SplitterLayout>
                     </div>
                 </SplitterLayout>
