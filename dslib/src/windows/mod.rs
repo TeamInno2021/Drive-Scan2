@@ -22,7 +22,7 @@ pub fn verify(dir: &Path) -> Result<bool, Box<dyn ::std::error::Error>> {
         Err("target path is not a valid directory".into())
     } else {
         Ok(true) // todo remove
-        // Ok(filesystem::identify(dir)? == "NTFS")
+                 // Ok(filesystem::identify(dir)? == "NTFS")
     }
 }
 
