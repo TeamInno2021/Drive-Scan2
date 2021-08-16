@@ -88,7 +88,7 @@ export class App extends Component<{}, { currentPage: string, currentFolder: dsl
                                         }}
                                         //Disable the button if we are at the root scanned folder
                                         disabled={this.state.currentFolder.path == this.state.rootPath}
-                                    >Up</Button>
+                                    >Back</Button>
                                 </li>
                                 <li>
                                     <FolderPie appComponent={this}/>
