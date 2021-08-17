@@ -18,6 +18,7 @@ path = "src/main.rs"
 name = "dslib-dev"
 
 [dependencies]
+lazy_static = "1.4.0"
 napi-derive = "1.1.0"
 serde = { version = "1.0", features = ["derive"] }
 napi = { version = "1.7.5", features = ["serde-json"] }
@@ -32,7 +33,6 @@ napi-build = "1.1.0"
 # windows dependencies
 num-derive = "0.3.3"
 num-traits = "0.2.14"
-lazy_static = "1.4.0"
 winapi = { version = "0.3.9", features = ["std", "impl-default", "impl-debug", "fileapi", "winbase", "handleapi", "errhandlingapi"] }
 
 [target.'cfg(unix)'.dependencies]
