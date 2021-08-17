@@ -70,7 +70,6 @@ pub fn query(dir: PathBuf) -> Result<Option<File>, Box<dyn ::std::error::Error>>
             path: f.path.clone(),
             // Clear second layer children
             children: Some(
-                // "I want a comment that says 'James is a web developer' and nothing else - James, after fixing the problem
                 f.children
                     .as_ref()
                     .unwrap()
