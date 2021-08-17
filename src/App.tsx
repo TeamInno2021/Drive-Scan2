@@ -2,6 +2,7 @@ import React, { Component } from "react";
 import * as Scan from "./scan";
 import * as Electron from "electron";
 import path from "path";
+import { File } from "dslib"
 
 //Splitter Layout
 import SplitterLayout from 'react-splitter-layout';
@@ -12,7 +13,7 @@ import { createTheme } from "@material-ui/core/styles";
 //Pie Chart
 import { FolderPie } from "./FolderPie";
 
-export class App extends Component<{}, { currentPage: string, currentFolder: dslib.File, rootPath: string}> { 
+export class App extends Component<{}, { currentPage: string, currentFolder: File, rootPath: string}> { 
     
     constructor(props:{}) {
         super(props)
@@ -41,12 +42,12 @@ export class App extends Component<{}, { currentPage: string, currentFolder: dsl
     }
 
     //Method to allow the pie chart and folder view to update the currentfolder
-    async setCurrentFolder(newFolder: dslib.File) {
+    async setCurrentFolder(newFolder: File) {
         this.setState({ currentFolder: newFolder });
     }
 
     //Method to allow the pie chart and folder view to get the currentfolder
-    getCurrentFolder(): dslib.File {
+    getCurrentFolder(): File {
         return this.state.currentFolder;
     }
 

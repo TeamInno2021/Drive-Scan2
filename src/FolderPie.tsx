@@ -2,7 +2,6 @@ import React, { Component, ReactElement } from "react";
 import * as Utility from "./utility";
 import * as Scan from "./scan";
 import * as Electron from "electron";
-import open from "open";
 
 //Splitter Layout
 import SplitterLayout from 'react-splitter-layout';
