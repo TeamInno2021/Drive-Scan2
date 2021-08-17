@@ -1,36 +1,36 @@
 export function strConvert(size:number) {
-    if (size < 1024) {
+    if (size < 1000) {
         size = Math.ceil(size);
-        return `${size} bytes`;
+        return `${size}B`;
     }
 
-    else if (size < 1024**2) {
-        size = size/1024;
+    else if (size < 1000**2) {
+        size = size/1000;
         size = Math.ceil(size);
-        return `${size} kilobytes`;
+        return `${size}KB`;
     }
 
-    else if (size < 1024**3) {
-        size = size/1024;
-        size = size/1024;
+    else if (size < 1000**3) {
+        size = size/1000;
+        size = size/1000;
         size = Math.ceil(size);
-        return `${size} megabytes`;
+        return `${size}MB`;
     }
 
-    else if (size < 1024**4) {
-        size = size/1024;
-        size = size/1024;
-        size = size/1024;
+    else if (size < 1000**4) {
+        size = size/1000;
+        size = size/1000;
+        size = size/1000;
         size = Math.ceil(size);
-        return `${size} gigabytes`;
+        return `${size}GB`;
     }
 
-    else if (size < 1024**5) {
-        size = size/1024;
-        size = size/1024;
-        size = size/1024;
-        size = size/1024;
+    else if (size < 1000**5) {
+        size = size/1000;
+        size = size/1000;
+        size = size/1000;
+        size = size/1000;
         size = Math.ceil(size);
-        return `${size} terabytes`;
+        return `${size}TB`;
     }
 } 
