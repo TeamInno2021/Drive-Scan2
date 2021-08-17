@@ -53,7 +53,7 @@ impl From<u8> for Scanner {
 
 // ------------------------------------------------------------
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct File {
     path: PathBuf,
     size: usize,
