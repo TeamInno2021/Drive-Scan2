@@ -45,7 +45,7 @@ export class App extends Component<{}, { currentPage: string, currentFolder: dsl
     }
     
     renderTree = (nodes: dslib.File) => (
-        <TreeItem key={nodes.path} nodeId={nodes.path} label={path.basename(nodes.path ) + strConvert(nodes.size)}>
+        <TreeItem key={nodes.path} nodeId={nodes.path} label={path.basename(nodes.path ) + " - " + strConvert(nodes.size)}>
             {Array.isArray(nodes.children) ? nodes.children.map((node) => this.renderTree(node)) : null}
             {/* nodesFromChildren(nodes.children); */}
         </TreeItem>
