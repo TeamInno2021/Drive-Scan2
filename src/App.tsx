@@ -1,24 +1,25 @@
-import React, { Component, DetailsHTMLAttributes } from "react";
-import * as Utility from "./utility";
+import React, { Component } from "react";
 import * as Scan from "./scan";
 import * as Electron from "electron";
+
+//Splitter Layout
 import SplitterLayout from 'react-splitter-layout';
 import 'react-splitter-layout/lib/index.css';
 import TreeView from '@material-ui/lab/TreeView';
+import dslib from "dslib";
+import path from "path";
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import ChevronRightIcon from '@material-ui/icons/ChevronRight';
 import TreeItem from '@material-ui/lab/TreeItem';
-import Path from 'path';
-import dslib, {File, scan} from "dslib";
-import path from "path";
 import { strConvert } from "./conversion";
+import { Button, ThemeProvider, Typography } from '@material-ui/core';
+import { createTheme } from "@material-ui/core/styles";;
 
-export class App extends Component<{}, { currentpage: string, currentFolder: dslib.File, folderTree: dslib.File, rootPath: string }> { 
-    
+export class App extends Component<{}, { currentPage: string, currentFolder: dslib.File, folderTree: dslib.File, rootPath: string }> { 
     constructor(props:{}) {
         super(props)
         this.state = {
-            currentpage:"scanpage", 
+            currentPage:"scanpage", 
             currentFolder: { 
                 path: "",
                 size: 0, 
@@ -40,7 +41,7 @@ export class App extends Component<{}, { currentpage: string, currentFolder: dsl
         });
         Scan.scan(result[0]);
         console.log(Scan.query(result[0]));
-        await this.setState({currentpage:"mainviewpage", rootPath: result[0], currentFolder: Scan.query(result[0]), folderTree: Scan.query(result[0])})
+        await this.setState({currentPage:"mainviewpage", rootPath: result[0], currentFolder: Scan.query(result[0]), folderTree: Scan.query(result[0])})
     }
     
     renderTree = (nodes: dslib.File) => (
@@ -62,13 +63,34 @@ export class App extends Component<{}, { currentpage: string, currentFolder: dsl
     // }
 
     render(): JSX.Element {
-        if(this.state.currentpage == "scanpage") {
-            return <h3>
-            Select
-            <input id="button" type="button" value="Directory" onClick={this.getDirectory.bind(this)}/>
-            </h3>;
+        if(this.state.currentPage == "scanpage") {
+            return (
+                <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                    <ThemeProvider theme={createTheme({ palette: { type: "dark" } })}>
+                        <ul style={{ width: "100%", height: "100%" }}>
+                            <li style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                <Typography variant="h1" color="textPrimary">
+                                    Drive Scan
+                                </Typography>
+                            </li>
+                            <li style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                <Typography variant="h4" color="textSecondary">
+                                    Find the things chewing up your disk space
+                                </Typography>
+                            </li>
+                            <li style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                <br/>
+                            </li>
+                            <li style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                                <Button variant="contained" color="primary" onClick={this.getDirectory.bind(this)}>
+                                    Scan Folder
+                                </Button>
+                            </li>
+                        </ul>
+                    </ThemeProvider>
+                </div>)
         }
-        else if(this.state.currentpage == "mainviewpage") {   
+        else if(this.state.currentPage == "mainviewpage") {   
             if (this.state.folderTree.size != 0) {                                     
                 return <h1>
                     <SplitterLayout vertical={false}>
