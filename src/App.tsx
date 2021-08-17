@@ -1,30 +1,40 @@
 import React, { Component } from "react";
 import * as Scan from "./scan";
 import * as Electron from "electron";
-import path from "path";
 import { File } from "dslib"
 
 //Splitter Layout
 import SplitterLayout from 'react-splitter-layout';
 import 'react-splitter-layout/lib/index.css';
-import { Button, ThemeProvider, Typography } from '@material-ui/core'
-import { createTheme } from "@material-ui/core/styles";
+import TreeView from '@material-ui/lab/TreeView';
+import dslib from "dslib";
+import path from "path";
+import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
+import ChevronRightIcon from '@material-ui/icons/ChevronRight';
+import TreeItem from '@material-ui/lab/TreeItem';
+import { strConvert } from "./conversion";
+import { Button, ThemeProvider, Typography } from '@material-ui/core';
+import { createTheme } from "@material-ui/core/styles";;
 
 //Pie Chart
 import { FolderPie } from "./FolderPie";
 
-export class App extends Component<{}, { currentPage: string, currentFolder: File, rootPath: string}> { 
-    
+export class App extends Component<{}, { currentPage: string, currentFolder: dslib.File, folderTree: dslib.File, rootPath: string }> { 
     constructor(props:{}) {
         super(props)
         this.state = {
-            currentPage: "scanpage",
-            currentFolder: {
+            currentPage:"scanpage", 
+            currentFolder: { 
                 path: "",
-                size: 0,
-                children: []
+                size: 0, 
+                children: [], 
             },
-            rootPath: ""
+            folderTree: { 
+                path: "",
+                size: 0, 
+                children: [],
+            }, 
+            rootPath: "", 
         }
     }
 
@@ -40,6 +50,13 @@ export class App extends Component<{}, { currentPage: string, currentFolder: Fil
             console.log(this.state.currentFolder);
         }
     }
+
+    renderTree = (nodes: dslib.File) => (
+        <TreeItem key={nodes.path} nodeId={nodes.path} label={path.basename(nodes.path ) + " - " + strConvert(nodes.size)}>
+            {Array.isArray(nodes.children) ? nodes.children.map((node) => this.renderTree(node)) : null}
+            {/* nodesFromChildren(nodes.children); */}
+        </TreeItem>
+    );
 
     //Method to allow the pie chart and folder view to update the currentfolder
     async setCurrentFolder(newFolder: File) {
@@ -85,14 +102,23 @@ export class App extends Component<{}, { currentPage: string, currentFolder: Fil
                 <SplitterLayout vertical={false}>
                     {/* TreeView */}
                     <div>
-                        Tom Put the TreeView Here
+
+                    <TreeView
+                        style={{color: "#ffffff"}}
+                        defaultCollapseIcon={<ExpandMoreIcon />}
+                        defaultExpanded={['root']}
+                        defaultExpandIcon={<ChevronRightIcon />}
+                    >
+                        {this.renderTree(this.state.currentFolder)}
+                    </TreeView>
+                
                     </div>
                     {/* Folder and Pie Views In Horizontal Splitter */}
                     <div>
                         <SplitterLayout vertical={true}>
                             {/* FolderView */}
                             <div>
-                                Alex Put the Folder View Here
+                                {/* Alex Put the Folder View Here */}
                             </div>
                             {/* PieView */}
                             <ul style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems:"center" }}>
