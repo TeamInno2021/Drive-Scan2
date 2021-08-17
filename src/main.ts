@@ -1,7 +1,7 @@
 import dslib from "dslib";
 import { app, BrowserWindow, ipcMain } from "electron";
 
-dslib.init();
+//dslib.init();
 
 ipcMain.on("scan", (event, dir) => {
     dslib.scan(dir);

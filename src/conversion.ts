@@ -1,20 +1,20 @@
 export function strConvert(size:number) {
     if (size < 1024) {
         size = Math.ceil(size);
-        return `${size} bytes`;
+        return `${size}B`;
     }
 
     else if (size < 1024**2) {
         size = size/1024;
         size = Math.ceil(size);
-        return `${size} kilobytes`;
+        return `${size}KiB`;
     }
 
     else if (size < 1024**3) {
         size = size/1024;
         size = size/1024;
         size = Math.ceil(size);
-        return `${size} megabytes`;
+        return `${size}MiB`;
     }
 
     else if (size < 1024**4) {
@@ -22,7 +22,7 @@ export function strConvert(size:number) {
         size = size/1024;
         size = size/1024;
         size = Math.ceil(size);
-        return `${size} gigabytes`;
+        return `${size}GiB`;
     }
 
     else if (size < 1024**5) {
@@ -31,6 +31,6 @@ export function strConvert(size:number) {
         size = size/1024;
         size = size/1024;
         size = Math.ceil(size);
-        return `${size} terabytes`;
+        return `${size}TiB`;
     }
 } 
