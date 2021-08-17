@@ -59,7 +59,7 @@ export class App extends Component<{}, { currentPage: string, currentFolder: Fil
                         <ul style={{ width: "100%", height: "100%" }}>
                             <li style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
                                 <Typography variant="h1" color="textPrimary">
-                                    Drive Scan
+                                    DriveScan
                                 </Typography>
                             </li>
                             <li style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
