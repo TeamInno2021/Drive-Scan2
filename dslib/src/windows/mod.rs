@@ -42,8 +42,8 @@ pub fn scan(dir: PathBuf) -> Result<(), Box<dyn ::std::error::Error>> {
 }
 
 pub fn query(dir: PathBuf) -> Result<Option<File>, Box<dyn ::std::error::Error>> {
-    if let Some(file) = data::fetch().lock().unwrap().take() {
-        let mut f = &file;
+    if let Some(file) = &*data::fetch().lock().unwrap() {
+        let mut f = file.clone();
 
         if let Ok(relative) = dir.strip_prefix(&f.path) {
             info!("Root: {:?}", f.path);
@@ -55,7 +55,8 @@ pub fn query(dir: PathBuf) -> Result<Option<File>, Box<dyn ::std::error::Error>>
                     if let Some(children) = &f.children {
                         for child in children {
                             if child.path == f.path.join(component) {
-                                f = child;
+                                f = child.clone();
+                                break;
                             }
                         }
                     }
@@ -71,10 +72,8 @@ pub fn query(dir: PathBuf) -> Result<Option<File>, Box<dyn ::std::error::Error>>
             // Clear second layer children
             children: Some(
                 f.children
-                    .as_ref()
                     .unwrap()
-                    .iter()
-                    .cloned()
+                    .into_iter()
                     .map(|mut child| {
                         child.children = child.children.map(|_| Vec::new());
                         child

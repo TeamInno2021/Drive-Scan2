@@ -19,7 +19,7 @@ import { createTheme } from "@material-ui/core/styles";;
 //Pie Chart
 import { FolderPie } from "./FolderPie";
 
-export class App extends Component<{}, { currentPage: string, currentFolder: dslib.File, folderTree: dslib.File, rootPath: string }> { 
+export class App extends Component<{}, { currentPage: string, currentFolder: dslib.File, rootPath: string }> { 
     constructor(props:{}) {
         super(props)
         this.state = {
@@ -29,11 +29,6 @@ export class App extends Component<{}, { currentPage: string, currentFolder: dsl
                 size: 0, 
                 children: [], 
             },
-            folderTree: { 
-                path: "",
-                size: 0, 
-                children: [],
-            }, 
             rootPath: "", 
         }
     }

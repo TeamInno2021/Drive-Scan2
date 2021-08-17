@@ -24,6 +24,6 @@ app.whenReady().then(() => {
         },
     });
 
-    win.webContents.openDevTools();
+    // win.webContents.openDevTools();
     win.loadFile("index.html");
 });
