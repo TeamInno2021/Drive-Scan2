@@ -18,6 +18,7 @@ import { createTheme } from "@material-ui/core/styles";;
 
 //Pie Chart
 import { FolderPie } from "./FolderPie";
+import { FolderList } from "./FolderList"
 
 export class App extends Component<{}, { currentPage: string, currentFolder: dslib.File, rootPath: string }> { 
     constructor(props:{}) {
@@ -112,8 +113,8 @@ export class App extends Component<{}, { currentPage: string, currentFolder: dsl
                     <div>
                         <SplitterLayout vertical={true}>
                             {/* FolderView */}
-                            <div>
-                                {/* Alex Put the Folder View Here */}
+                            <div style={{width: "100%", height: "100%"}}>
+                                <FolderList appComponent={this}/>
                             </div>
                             {/* PieView */}
                             <ul style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems:"center" }}>
