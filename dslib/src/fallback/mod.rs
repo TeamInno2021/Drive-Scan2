@@ -88,6 +88,11 @@ impl HashFile {
     ///Constructor to initialise a HashFile and recursively scan through all its children
     pub fn init(path: PathBuf) -> Result<HashFile, Error> {
         trace!("Scanning: {:?}:", path);
+        //Catch the virtual memory file, no idea why this isn't caught by the later checks
+        #[cfg(unix)]
+        if path.to_str().unwrap() == "/proc/kcore" {
+            return Ok(HashFile::new(path, 0, false));
+        }
         //Get useful metadata for the given path
         let meta_res = symlink_metadata(&path);
         //Assume not a directory and a file size of zero if we don't have perms to metadata
